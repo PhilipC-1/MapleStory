@@ -1,0 +1,76 @@
+import json
+
+# 技能資料（用簡化範例，完整可貼前面 skill_data 結構）
+skills = [...]  # 這裡貼上前面我幫你做好的 `skills_data` 清單（太長略）
+
+# HTML 範本
+html = """<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>技能模擬器</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f7f7f7; }
+        .skill { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
+        .skill h2 { margin-top: 0; }
+        img { height: 64px; vertical-align: middle; margin-right: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #aaa; padding: 5px; text-align: center; }
+        .controls { margin: 10px 0; }
+        .highlight { background-color: #def; font-weight: bold; }
+    </style>
+</head>
+<body>
+<h1>技能配點模擬器</h1>
+<div id="skills"></div>
+<script>
+const skills = {skills_json};
+
+function renderSkill(skill) {{
+    let html = `
+    <div class="skill">
+        <h2><img src="${{skill.image}}" alt="">${{skill.name}}</h2>
+        <p><strong>類型：</strong>${{skill.type}}　　<strong>前置：</strong>${{skill.prerequisite || '無'}}</p>
+        <p><strong>技能效果：</strong>${{skill.description}}</p>
+        <div class="controls">
+            <button onclick="changeLevel('${{skill.name}}', -1)">-</button>
+            <span id="${{skill.name}}-level">Lv. 0</span>
+            <button onclick="changeLevel('${{skill.name}}', 1)">+</button>
+        </div>
+        <table>
+            <thead>
+                <tr>${{skill.headers.map(h => `<th>${{h}}</th>`).join('')}}</tr>
+            </thead>
+            <tbody>
+                ${{skill.levels.map((row, idx) => `
+                    <tr id="${{skill.name}}-row-${{idx}}">
+                        ${{row.map(cell => `<td>${{cell}}</td>`).join('')}}
+                    </tr>`).join('')}}
+            </tbody>
+        </table>
+    </div>`;
+    return html;
+}}
+
+document.getElementById('skills').innerHTML = skills.map(renderSkill).join('');
+const levels = Object.fromEntries(skills.map(s => [s.name, 0]));
+
+function changeLevel(name, delta) {{
+    const skill = skills.find(s => s.name === name);
+    levels[name] = Math.max(0, Math.min(skill.max_level, levels[name] + delta));
+    document.getElementById(`${{name}}-level`).innerText = `Lv. ${{levels[name]}}`;
+    for (let i = 0; i < skill.max_level; i++) {{
+        const row = document.getElementById(`${{name}}-row-${{i}}`);
+        if (row) row.classList.toggle('highlight', i === levels[name] - 1);
+    }}
+}}
+</script>
+</body>
+</html>
+""".replace("{skills_json}", json.dumps(skills, ensure_ascii=False))
+
+# 儲存成 HTML 檔案
+with open("技能模擬器.html", "w", encoding="utf-8") as f:
+    f.write(html)
+
+print("✅ 已產生：技能模擬器.html，用瀏覽器開啟即可！")
