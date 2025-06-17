@@ -2,10 +2,17 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8" />
-    <title>技能配點模擬器（整合版）</title>
+    <title>技能配點模擬器</title>
     <style>
         body { font-family: "微軟正黑體", sans-serif; background: #f9f9f9; padding: 20px; }
         h1 { text-align: center; }
+        #points-left {
+            font-size: 22px;
+            font-weight: bold;
+            color: #007acc;
+            text-align: center;
+            margin-bottom: 20px;
+        }
         .skill { background: #fff; border-radius: 8px; box-shadow: 0 0 10px #ccc; margin: 20px auto; max-width: 900px; padding: 20px; }
         .skill-header { display: flex; align-items: center; }
         .skill-header img { width: 64px; height: 64px; margin-right: 15px; }
@@ -21,188 +28,202 @@
     </style>
 </head>
 <body>
-    <h1>技能配點模擬器（整合版）</h1>
+    <h1>技能配點模擬器</h1>
+    <div id="points-left">剩餘技能點數：61</div>
     <div id="skills-container"></div>
 
 <script>
+const MAX_POINTS = 61;
+
 const skills = [
-    // 依要求順序排列
     {
         name: "精準強化",
         image: "https://maple.yampiz.com/maple/custom/skill/sk_01001.png",
         max_level: 16,
-        max_points_limit: 16, // 額外限制，與max_level一致
         type: "被動",
         prerequisite: "",
         description: "增加命中率",
         headers: ["技能等級", "命中率"],
         levels: [
-            [1,"+1"], [2,"+2"], [3,"+3"], [4,"+4"], [5,"+5"], [6,"+6"], [7,"+7"], [8,"+8"], [9,"+9"],
-            [10,"+10"], [11,"+11"], [12,"+12"], [13,"+13"], [14,"+14"], [15,"+15"], [16,"+16"]
+            [1,"+1"],
+            [2,"+2"],
+            [3,"+3"],
+            [4,"+4"],
+            [5,"+5"],
+            [6,"+6"],
+            [7,"+7"],
+            [8,"+8"],
+            [9,"+9"],
+            [10,"+10"],
+            [11,"+11"],
+            [12,"+12"],
+            [13,"+13"],
+            [14,"+14"],
+            [15,"+15"],
+            [16,"+16"]
         ]
     },
     {
         name: "百步穿楊",
         image: "https://maple.yampiz.com/maple/custom/skill/sk_01002.png",
         max_level: 8,
-        max_points_limit: 8,
         type: "被動",
         prerequisite: "精準強化x3",
         description: "增加弓或弩弓的射程距離",
         headers: ["技能等級", "射程"],
         levels: [
-            [1,"25%"], [2,"50%"], [3,"75%"], [4,"100%"], [5,"125%"], [6,"150%"], [7,"175%"], [8,"200%"]
+            [1,"25%"],
+            [2,"50%"],
+            [3,"75%"],
+            [4,"100%"],
+            [5,"125%"],
+            [6,"150%"],
+            [7,"175%"],
+            [8,"200%"]
         ]
     },
     {
         name: "霸王箭",
         image: "https://maple.yampiz.com/maple/custom/skill/sk_01003.png",
         max_level: 20,
-        max_points_limit: 61, // 這是你要求的最大投入點數限制
         type: "被動",
         prerequisite: "",
-        description: "攻擊中會有一定比例出現致命性一擊",
-        headers: ["技能等級", "發動率", "暴擊攻擊力"],
+        description: "攻擊中會有一定比例出現致命性一擊，增加固定額外傷害",
+        headers: ["技能等級", "發動率", "爆擊額外傷害"],
         levels: [
-            [1,"2%","105%"], [2,"4%","110%"], [3,"6%","115%"], [4,"8%","120%"], [5,"10%","125%"], [6,"12%","130%"],
-            [7,"14%","135%"], [8,"16%","140%"], [9,"18%","145%"], [10,"20%","150%"], [11,"22%","155%"], [12,"24%","160%"],
-            [13,"26%","165%"], [14,"28%","170%"], [15,"30%","175%"], [16,"32%","180%"], [17,"34%","185%"], [18,"36%","190%"],
-            [19,"38%","195%"], [20,"40%","200%"]
+            [1,"2%","5%"],
+            [2,"4%","10%"],
+            [3,"6%","15%"],
+            [4,"8%","20%"],
+            [5,"10%","25%"],
+            [6,"12%","30%"],
+            [7,"14%","35%"],
+            [8,"16%","40%"],
+            [9,"18%","45%"],
+            [10,"20%","50%"],
+            [11,"22%","55%"],
+            [12,"24%","60%"],
+            [13,"26%","65%"],
+            [14,"28%","70%"],
+            [15,"30%","75%"],
+            [16,"32%","80%"],
+            [17,"34%","85%"],
+            [18,"36%","90%"],
+            [19,"38%","95%"],
+            [20,"40%","100%"]
         ]
     },
     {
         name: "集中術",
         image: "https://maple.yampiz.com/maple/custom/skill/sk_01004.png",
         max_level: 20,
-        max_points_limit: 20,
         type: "主動",
         prerequisite: "精準強化x3",
         description: "可在一定時間集中精神，增加命中率和迴避率。",
         headers: ["技能等級", "消耗MP", "命中率", "迴避率", "持續時間"],
         levels: [
-            [1,8,"+1","+1","70秒"], [2,8,"+2","+2","80秒"], [3,8,"+3","+3","90秒"], [4,8,"+4","+4","100秒"], [5,8,"+5","+5","110秒"],
-            [6,8,"+6","+6","130秒"], [7,8,"+7","+7","140秒"], [8,8,"+8","+8","150秒"], [9,8,"+9","+9","160秒"], [10,8,"+10","+10","170秒"],
-            [11,16,"+11","+11","195秒"], [12,16,"+12","+12","205秒"], [13,16,"+13","+13","215秒"], [14,16,"+14","+14","225秒"],
-            [15,16,"+15","+15","235秒"], [16,16,"+16","+16","260秒"], [17,16,"+17","+17","270秒"], [18,16,"+18","+18","280秒"],
-            [19,16,"+19","+19","290秒"], [20,16,"+20","+20","300秒"]
+            [1,8,"+1","+1","70秒"],
+            [2,8,"+2","+2","80秒"],
+            [3,8,"+3","+3","90秒"],
+            [4,8,"+4","+4","100秒"],
+            [5,8,"+5","+5","110秒"],
+            [6,8,"+6","+6","130秒"],
+            [7,8,"+7","+7","140秒"],
+            [8,8,"+8","+8","150秒"],
+            [9,8,"+9","+9","160秒"],
+            [10,8,"+10","+10","170秒"],
+            [11,16,"+11","+11","195秒"],
+            [12,16,"+12","+12","205秒"],
+            [13,16,"+13","+13","215秒"],
+            [14,16,"+14","+14","225秒"],
+            [15,16,"+15","+15","235秒"],
+            [16,16,"+16","+16","260秒"],
+            [17,16,"+17","+17","270秒"],
+            [18,16,"+18","+18","280秒"],
+            [19,16,"+19","+19","290秒"],
+            [20,16,"+20","+20","300秒"]
         ]
     },
     {
         name: "斷魂箭",
         image: "https://maple.yampiz.com/maple/custom/skill/sk_01005.png",
         max_level: 20,
-        max_points_limit: 20,
         type: "主動",
         prerequisite: "",
         description: "發射強力的箭矢，對敵人造成較大的殺傷力。",
         headers: ["技能等級", "消耗MP", "攻擊力"],
         levels: [
-            [1,6,"141%"], [2,6,"146%"], [3,6,"151%"], [4,6,"156%"], [5,7,"164%"], [6,7,"169%"], [7,7,"174%"],
-            [8,8,"182%"], [9,8,"187%"], [10,9,"195%"], [11,9,"200%"], [12,10,"208%"], [13,10,"213%"],
-            [14,11,"221%"], [15,11,"226%"], [16,12,"234%"], [17,12,"239%"], [18,13,"247%"], [19,13,"252%"], [20,14,"260%"]
+            [1,6,"141%"],
+            [2,6,"146%"],
+            [3,6,"151%"],
+            [4,6,"156%"],
+            [5,7,"164%"],
+            [6,7,"169%"],
+            [7,7,"174%"],
+            [8,8,"182%"],
+            [9,8,"187%"],
+            [10,9,"195%"],
+            [11,9,"200%"],
+            [12,10,"208%"],
+            [13,10,"213%"],
+            [14,11,"221%"],
+            [15,11,"226%"],
+            [16,12,"234%"],
+            [17,12,"239%"],
+            [18,13,"247%"],
+            [19,13,"252%"],
+            [20,14,"260%"]
         ]
     },
     {
         name: "二連箭",
         image: "https://maple.yampiz.com/maple/custom/skill/sk_01006.png",
         max_level: 20,
-        max_points_limit: 20,
         type: "主動",
         prerequisite: "斷魂箭x1",
         description: "一次射出兩枝箭，向怪物發動兩次攻擊。",
         headers: ["技能等級", "消耗MP", "攻擊力"],
         levels: [
-            [1,8,"76%"], [2,8,"78%"], [3,8,"80%"], [4,8,"82%"], [5,9,"86%"], [6,9,"88%"], [7,9,"90%"], [8,10,"94%"],
-            [9,10,"96%"], [10,11,"100%"], [11,11,"102%"], [12,12,"106%"], [13,12,"108%"], [14,13,"112%"],
-            [15,13,"114%"], [16,14,"118%"], [17,14,"120%"], [18,15,"124%"], [19,15,"126%"], [20,16,"130%"]
+            [1,8,"76%"],
+            [2,8,"78%"],
+            [3,8,"80%"],
+            [4,8,"82%"],
+            [5,9,"86%"],
+            [6,9,"88%"],
+            [7,9,"90%"],
+            [8,10,"94%"],
+            [9,10,"96%"],
+            [10,11,"100%"],
+            [11,11,"102%"],
+            [12,12,"106%"],
+            [13,12,"108%"],
+            [14,13,"112%"],
+            [15,13,"114%"],
+            [16,14,"118%"],
+            [17,14,"120%"],
+            [18,15,"124%"],
+            [19,15,"126%"],
+            [20,16,"130%"]
         ]
     }
 ];
 
-// 記錄目前各技能點數
+// 技能點數紀錄，初始都0
 const levels = {};
 skills.forEach(s => { levels[s.name] = 0; });
 
-/**
- * 解析前置技能字串，例如 "精準強化x3" 回傳 {name:"精準強化", level:3}
- * 若無前置條件，回 null
- */
-function parsePrerequisite(prereq) {
-    if (!prereq || prereq.trim() === "" || prereq.toLowerCase() === "無") return null;
-    const match = prereq.match(/^(.+?)x(\d+)$/);
-    if (!match) return { name: prereq.trim(), level: 1 }; // 沒有 xN 預設1級
-    return { name: match[1].trim(), level: parseInt(match[2], 10) };
+function getTotalPointsUsed() {
+    return Object.values(levels).reduce((a, b) => a + b, 0);
 }
 
-/**
- * 檢查某技能能否升級（是否符合前置條件）
- */
-function canLevelUp(skillName) {
-    const skill = skills.find(s => s.name === skillName);
-    if (!skill) return false;
-
-    const pre = parsePrerequisite(skill.prerequisite);
-    if (!pre) return true; // 無前置條件
-
-    const currentPreLevel = levels[pre.name] || 0;
-    if (currentPreLevel < pre.level) {
-        alert(`升級【${skillName}】前，必須先將【${pre.name}】點滿 Lv.${pre.level} 以上！`);
-        return false;
-    }
-
-    // 特殊限制：霸王箭最多61點
-    if(skill.name === "霸王箭" && levels[skillName] >= skill.max_points_limit) {
-        alert(`【${skillName}】最多只能投入 ${skill.max_points_limit} 點！`);
-        return false;
-    }
-
-    return true;
+function getPointsLeft() {
+    return MAX_POINTS - getTotalPointsUsed();
 }
 
-/**
- * 修改技能等級函式（增減）
- */
-function changeLevel(name, delta) {
-    const skill = skills.find(s => s.name === name);
-    if (!skill) return;
-
-    let currentLevel = levels[name];
-    let newLevel = currentLevel + delta;
-
-    // 防止低於 0 或超過最大等級
-    if (newLevel < 0) newLevel = 0;
-    if (newLevel > skill.max_level) newLevel = skill.max_level;
-
-    // 計算整體技能點加總（扣掉本技能目前點數，再加上新點數）
-    let totalPoints = 0;
-    for (const k in levels) {
-        if (k === name) totalPoints += newLevel;
-        else totalPoints += levels[k];
-    }
-
-    if (totalPoints > 61) {
-        alert("總技能點數不可超過 61 點！");
-        return;  // 不更新等級，直接退出
-    }
-
-    // 更新等級
-    levels[name] = newLevel;
-    document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
-
-    // 標示目前等級列
-    skill.levels.forEach((_, i) => {
-        const row = document.getElementById(`row-${name}-${i}`);
-        if (row) {
-            if (i === newLevel - 1) row.classList.add("highlight");
-            else row.classList.remove("highlight");
-        }
-    });
+function updatePointsLeftUI() {
+    document.getElementById("points-left").innerText = `剩餘技能點數：${getPointsLeft()}`;
 }
 
-
-/**
- * 依技能資料產生HTML區塊
- */
 function renderSkill(skill) {
     let html = `
     <div class="skill">
@@ -236,8 +257,51 @@ function renderSkill(skill) {
     return html;
 }
 
-// 頁面載入時渲染所有技能
+function changeLevel(name, delta) {
+    const skill = skills.find(s => s.name === name);
+    if (!skill) return;
+
+    let currentLevel = levels[name];
+    let newLevel = currentLevel + delta;
+
+    if (newLevel < 0) newLevel = 0;
+    if (newLevel > skill.max_level) newLevel = skill.max_level;
+
+    // 檢查前置技能條件
+    if (newLevel > 0 && skill.prerequisite) {
+        let preSkillName = skill.prerequisite.split("x")[0].trim();
+        let preSkillLevelRequired = parseInt(skill.prerequisite.split("x")[1]);
+        if (levels[preSkillName] < preSkillLevelRequired) {
+            alert(`需要前置技能「${preSkillName}」至少等級 ${preSkillLevelRequired}`);
+            return;
+        }
+    }
+
+    // 檢查點數上限
+    let totalAfterChange = getTotalPointsUsed() - currentLevel + newLevel;
+    if (totalAfterChange > MAX_POINTS) {
+        alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
+        return;
+    }
+
+    levels[name] = newLevel;
+    document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
+
+    // 標示目前等級列
+    skill.levels.forEach((_, i) => {
+        const row = document.getElementById(`row-${name}-${i}`);
+        if (row) {
+            if (i === newLevel - 1) row.classList.add("highlight");
+            else row.classList.remove("highlight");
+        }
+    });
+
+    updatePointsLeftUI();
+}
+
+// 初始化頁面渲染
 document.getElementById("skills-container").innerHTML = skills.map(renderSkill).join("");
+updatePointsLeftUI();
 </script>
 </body>
 </html>
