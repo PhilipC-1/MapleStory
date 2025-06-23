@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>初心者 技能模擬器</title>
+    <style>
+      body { font-family: "微軟正黑體", sans-serif; background: #f9f9f9; padding: 20px; }
+      h1 { text-align: center; }
+      .skill { background: #fff; border-radius: 8px; box-shadow: 0 0 10px #ccc; margin: 20px auto; max-width: 900px; padding: 20px; }
+      .skill-header { display: flex; align-items: center; }
+      .skill-header img { width: 64px; height: 64px; margin-right: 15px; }
+      .skill-header h2 { margin: 0; }
+      .skill-info {
+        margin-top: 10px;
+        font-size: 18px;
+        font-weight: bold;  /* 改粗體 */
+        color: #000;  /* 改黑色 */
+      }
+      .controls { margin-top: 15px; }
+      button { font-size: 18px; padding: 5px 12px; margin: 0 5px; cursor: pointer; }
+      .desc { margin-top: 10px; font-size: 20px; font-weight: bold; }
+      #points-remaining {
+        text-align: center;
+        font-size: 30px;    /* 放大 */
+        margin-top: 10px;
+        font-weight: bold;
+      }
+      #remaining { color: red; }
+      table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+      th, td { border: 1px solid #bbb; padding: 6px; text-align: center; }
+      tr.highlight { background-color: #d4f0ff; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <h1>初心者 技能模擬器</h1>
+    <div id="points-remaining">可用技能點數：<span id="remaining">6</span></div>
+    <div id="skills-container"></div>
+
+    <script>
+      const maxPoints = 6;
+      let usedPoints = 0;
+      let holdInterval = null;
+
+      const skills = [
+        {
+          name: "蝸牛丟擲術",
+          image: "https://maple.yampiz.com/maple/custom/skill/sk_00001.png",
+          max_level: 3,
+          type: "主動",
+          prerequisite: "",
+          description: "從遠距離丟擲蝸牛殼攻擊敵人",
+          levels: [
+            ["10", "10"],
+            ["15", "25"],
+            ["20", "40"]
+          ],
+          headers: ["消耗MP", "攻擊力"]
+        },
+        {
+          name: "團隊治癒",
+          image: "https://maple.yampiz.com/maple/custom/skill/sk_00002.png",
+          max_level: 3,
+          type: "主動",
+          prerequisite: "",
+          description: "在30秒內持續恢復HP，每10秒恢復一次，冷卻時間為1分鐘。",
+          levels: [
+            ["5", "216"],
+            ["10", "216"],
+            ["15", "216"]
+          ],
+          headers: ["消耗MP", "HP回復量"]
+        },
+        {
+          name: "疾風之步",
+          image: "https://maple.yampiz.com/maple/custom/skill/sk_00003.png",
+          max_level: 3,
+          type: "主動",
+          prerequisite: "",
+          description: "暫時增加角色移動速度",
+          levels: [
+            ["4", "10", "4秒"],
+            ["8", "15", "8秒"],
+            ["12", "20", "12秒"]
+          ],
+          headers: ["消耗MP", "移動速度", "持續時間"]
+        }
+      ];
+
+      const levels = {};
+      skills.forEach(s => levels[s.name] = 0);
+
+      function updatePoints() {
+        const total = skills.reduce((sum, s) => sum + levels[s.name], 0);
+        usedPoints = total;
+        document.getElementById("remaining").innerText = maxPoints - usedPoints;
+      }
+
+      function renderSkill(skill) {
+        let html = `
+        <div class="skill">
+          <div class="skill-header">
+            <img src="${skill.image}" alt="${skill.name}" />
+            <h2>${skill.name}</h2>
+          </div>
+          <div class="skill-info">
+            <strong>類型：</strong>${skill.type}　
+            <strong>前置技能：</strong>${skill.prerequisite || "無"}
+          </div>
+          <div class="desc">${skill.description}</div>
+          <div class="controls">
+            <button onmousedown="startHold('${skill.name}', -1)" onmouseup="stopHold()" onmouseleave="stopHold()">-</button>
+            <span id="level-${skill.name}">Lv. 0</span>
+            <button onmousedown="startHold('${skill.name}', 1)" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
+          </div>
+          <table>
+            <thead><tr><th>技能等級</th>${skill.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${skill.levels.map((row, i) =>
+                `<tr id="row-${skill.name}-${i}"><td>${i + 1}</td>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
+              ).join('')}
+            </tbody>
+          </table>
+        </div>`;
+        return html;
+      }
+
+      function changeLevel(name, delta) {
+        const skill = skills.find(s => s.name === name);
+        let newLevel = levels[name] + delta;
+        if (newLevel < 0) newLevel = 0;
+        if (newLevel > skill.max_level) newLevel = skill.max_level;
+        const total = skills.reduce((sum, s) => sum + (s.name === name ? newLevel : levels[s.name]), 0);
+        if (total > maxPoints) return;
+        levels[name] = newLevel;
+        document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
+        skill.levels.forEach((_, i) => {
+          const row = document.getElementById(`row-${name}-${i}`);
+          row?.classList.toggle("highlight", i === newLevel - 1);
+        });
+        updatePoints();
+      }
+
+      function startHold(name, delta) {
+        changeLevel(name, delta);
+        holdInterval = setInterval(() => changeLevel(name, delta), 150);
+      }
+
+      function stopHold() {
+        clearInterval(holdInterval);
+      }
+
+      document.getElementById("skills-container").innerHTML = skills.map(renderSkill).join("");
+      updatePoints();
+    </script>
+  </body>
+</html>
