@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>法師技能模擬器</title>
+  <style>
+    body {
+      font-family: "微軟正黑體", sans-serif;
+      background: #f9f9f9;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .skill {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #ccc;
+      margin: 20px auto;
+      max-width: 900px;
+      padding: 20px;
+    }
+    .skill-header {
+      display: flex;
+      align-items: center;
+    }
+    .skill-header img {
+      width: 64px;
+      height: 64px;
+      margin-right: 15px;
+    }
+    .skill-header h2 {
+      margin: 0;
+    }
+    .skill-info {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #000;
+      background-color: #e6f5ff;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    .controls {
+      margin-top: 15px;
+    }
+    button {
+      font-size: 18px;
+      padding: 5px 12px;
+      margin: 0 5px;
+      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .desc {
+      margin-top: 10px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    #points-remaining {
+      text-align: center;
+      font-size: 30px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #remaining {
+      color: red;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    thead tr {
+      background-color: #e6e0f8; /* 淡紫色 */
+    }
+    th,
+    td {
+      border: 1px solid #bbb;
+      padding: 6px;
+      text-align: center;
+    }
+    tr.highlight {
+      background-color: #d4f0ff;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>法師技能模擬器</h1>
+  <div id="points-remaining">
+    可用技能點數：<span id="remaining">67</span>
+  </div>
+  <div id="skills-container"></div>
+
+  <script>
+    const maxPoints = 67;
+    let usedPoints = 0;
+    let holdInterval = null;
+
+    const skills = [
+      {
+        name: "魔力淨化",
+        image:
+          "https://maple.yampiz.com/maple/custom/skill/sk_01007.png",
+        max_level: 16,
+        type: "被動",
+        prerequisite: "",
+        description: "技能效果：每10秒鐘可恢復更多量的MP。",
+        headers: ["MP追加回復量"],
+        levels: Array.from({ length: 16 }, (_, i) => [
+          `${((i + 1) * 0.1).toFixed(1)}x角色等級+3`,
+        ]),
+      },
+      {
+        name: "魔力擴展",
+        image:
+          "https://maple.yampiz.com/maple/custom/skill/sk_01008.png",
+        max_level: 10,
+        type: "被動",
+        prerequisite: "魔力淨化 5",
+        description: "技能效果：當等級提升時，MP的最大追加量。",
+        headers: ["升級追加量"],
+        levels: Array.from({ length: 10 }, (_, i) => [
+          ((i + 1) * 2).toString(),
+        ]),
+      },
+      {
+        name: "魔心防禦",
+        image:
+          "https://maple.yampiz.com/maple/custom/skill/sk_01009.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "",
+        description:
+          "技能效果：一定的時間內，依比例用MP來帶替傷害所耗損的HP生命值。<br>但若MP達到0時，則直接消耗HP。",
+        headers: ["消耗MP", "持續時間", "替代率"],
+        levels: [
+          ...Array.from({ length: 10 }, (_, i) => [
+            "6",
+            `${30 * (i + 1)}秒`,
+            `${23 + i * 3}%`,
+          ]),
+          ...Array.from({ length: 10 }, (_, i) => [
+            "12",
+            `${330 + i * 30}秒`,
+            `${53 + i * 3}%`,
+          ]),
+        ],
+      },
+      {
+        name: "魔力之盾",
+        image:
+          "https://maple.yampiz.com/maple/custom/skill/sk_01010.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "魔心防禦 3",
+        description:
+          "技能效果：一定時間內把魔力集中在盔甲上。<br>提高物理防禦力。",
+        headers: ["消耗MP", "持續時間", "防禦力"],
+        levels: [
+          ...Array.from({ length: 10 }, (_, i) => [
+            "8",
+            `${20 * (i + 1)}秒`,
+            `+${(i + 1) * 2}`,
+          ]),
+          ...Array.from({ length: 10 }, (_, i) => [
+            "16",
+            `${220 + i * 20}秒`,
+            `+${22 + i * 2}`,
+          ]),
+        ],
+      },
+      {
+        name: "魔靈彈",
+        image:
+          "https://maple.yampiz.com/maple/custom/skill/sk_01011.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "",
+        description: "技能效果：消耗MP來攻擊單一個怪物。",
+        headers: ["消耗MP", "攻擊力", "熟練度"],
+        levels: Array.from({ length: 20 }, (_, i) => {
+          const mp = i < 10 ? 7 : 14;
+          const atk = 17 + i * 2;
+          const mastery = 15 + Math.floor(i / 2) * 5;
+          return [mp.toString(), atk.toString(), `${mastery}%`];
+        }),
+      },
+      {
+        name: "魔力爪",
+        image:
+          "https://maple.yampiz.com/maple/custom/skill/sk_01012.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "魔靈彈 1",
+        description:
+          "技能效果：消耗MP來對同一個怪物發動兩次的連續攻擊。",
+        headers: ["消耗MP", "攻擊力", "熟練度"],
+        levels: Array.from({ length: 20 }, (_, i) => {
+          const mp = i < 10 ? 10 : 20;
+          const atk = 6 + i;
+          const mastery = 15 + Math.floor(i / 2) * 5;
+          return [mp.toString(), atk.toString(), `${mastery}%`];
+        }),
+      },
+    ];
+
+    const levels = {};
+    skills.forEach((s) => (levels[s.name] = 0));
+
+    function updatePoints() {
+      const total = skills.reduce((sum, s) => sum + levels[s.name], 0);
+      usedPoints = total;
+      document.getElementById("remaining").innerText = maxPoints - usedPoints;
+    }
+
+    function renderSkill(skill) {
+      let html = `
+    <div class="skill">
+      <div class="skill-header">
+        <img src="${skill.image}" alt="${skill.name}" />
+        <h2>${skill.name}</h2>
+      </div>
+      <div class="skill-info">
+        類型：${skill.type}　前置技能：${skill.prerequisite || "無"}
+      </div>
+      <div class="desc">${skill.description}</div>
+      <div class="controls">
+        <button onmousedown="startHold('${skill.name}', -1)" onmouseup="stopHold()" onmouseleave="stopHold()">-</button>
+        <span id="level-${skill.name}">Lv. 0</span>
+        <button onmousedown="startHold('${skill.name}', 1)" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
+      </div>
+      <table>
+        <thead><tr><th>技能等級</th>${skill.headers
+          .map((h) => `<th>${h}</th>`)
+          .join("")}</tr></thead>
+        <tbody>
+          ${skill.levels
+            .map(
+              (row, i) =>
+                `<tr id="row-${skill.name}-${i}"><td>${i + 1}</td>${row
+                  .map((cell) => `<td>${cell}</td>`)
+                  .join("")}</tr>`
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>`;
+      return html;
+    }
+
+    function changeLevel(name, delta) {
+      const skill = skills.find((s) => s.name === name);
+      let newLevel = levels[name] + delta;
+      if (newLevel < 0) newLevel = 0;
+      if (newLevel > skill.max_level) newLevel = skill.max_level;
+
+      if (skill.prerequisite) {
+        const [reqName, reqLv] = skill.prerequisite.split(" ");
+        if ((levels[reqName] || 0) < parseInt(reqLv)) return;
+      }
+
+      const total = skills.reduce(
+        (sum, s) => sum + (s.name === name ? newLevel : levels[s.name]),
+        0
+      );
+      if (total > maxPoints) return;
+      levels[name] = newLevel;
+      document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
+      skill.levels.forEach((_, i) => {
+        const row = document.getElementById(`row-${name}-${i}`);
+        row?.classList.toggle("highlight", i === newLevel - 1);
+      });
+      updatePoints();
+    }
+
+    function startHold(name, delta) {
+      changeLevel(name, delta);
+      holdInterval = setInterval(() => changeLevel(name, delta), 150);
+    }
+
+    function stopHold() {
+      clearInterval(holdInterval);
+    }
+
+    document.getElementById("skills-container").innerHTML = skills
+      .map(renderSkill)
+      .join("");
+    updatePoints();
+  </script>
+</body>
+</html>
