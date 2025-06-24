@@ -30,14 +30,20 @@
     #points-remaining {
       color: red;
     }
+    .skills-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
     .skill {
       background: #fff;
       border-radius: 8px;
       box-shadow: 0 0 10px #ccc;
-      margin: 20px auto;
-      max-width: 1000px;
       padding: 20px;
       position: relative;
+      flex: 0 0 calc(50% - 20px);
+      box-sizing: border-box;
     }
     .unlock-status {
       position: absolute;
@@ -46,8 +52,12 @@
       font-size: 16px;
       font-weight: bold;
     }
-    .unlock-status.locked { color: #a0522d; }
-    .unlock-status.unlocked { color: green; }
+    .unlock-status.locked {
+      color: #a0522d;
+    }
+    .unlock-status.unlocked {
+      color: green;
+    }
     .skill-header {
       display: flex;
       align-items: center;
@@ -61,12 +71,12 @@
       margin: 0;
     }
     .meta-table, .skill-table {
-      width: auto;
-      margin-left: 0;
-      margin-right: auto;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
+     width: auto;              /* ✅ 改為自動寬度 */
+     border-collapse: collapse;
+     margin-top: 10px;
+     margin-left: 0;
+     margin-right: auto;
+}
     .meta-table td, .skill-table td, .skill-table th {
       padding: 6px 10px;
       border: 1px solid #ccc;
@@ -114,201 +124,224 @@
 <body>
   <h1>弓箭手</h1>
   <div id="floating-points">可用技能點數：<span id="points-remaining">61</span></div>
-  <div id="skills-container"></div>
+  <div id="skills-container" class="skills-grid"></div>
 
-<script>
-const MAX_POINTS = 61;
-let holdTimeout = null;
-let holdInterval = null;
-let lastWarning = '';
+  <script>
+    const MAX_POINTS = 61;
+    let usedPoints = 0;
+    let holdInterval = null;
+    let holdTimeout = null;
+    let lastWarning = '';
 
-const skills = [
-  {
-    name: "精準強化",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01001.png",
-    max_level: 16,
-    type: "被動",
-    prerequisite: "",
-    description: "增加命中率。",
-    headers: ["技能等級", "命中率"],
-    levels: Array.from({ length: 16 }, (_, i) => [i + 1, `+${i + 1}`])
-  },
-  {
-    name: "百步穿楊",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01002.png",
-    max_level: 8,
-    type: "被動",
-    prerequisite: "精準強化 LV3",
-    description: "增加弓或弩弓的射程距離。",
-    headers: ["技能等級", "射程"],
-    levels: Array.from({ length: 8 }, (_, i) => [i + 1, `${25 * (i + 1)}%`])
-  },
-  {
-    name: "霸王箭",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01003.png",
-    max_level: 20,
-    type: "被動",
-    prerequisite: "",
-    description: "攻擊中有一定機率發動致命一擊，\n增加固定額外傷害。",
-    headers: ["技能等級", "發動率", "爆擊額外傷害"],
-    levels: Array.from({ length: 20 }, (_, i) => [i + 1, `${2 * (i + 1)}%`, `${5 * (i + 1)}%`])
-  },
-  {
-    name: "集中術",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01004.png",
-    max_level: 20,
-    type: "主動",
-    prerequisite: "精準強化 LV3",
-    description: "一定時間內增加命中與迴避率。",
-    headers: ["技能等級", "消耗MP", "命中率", "迴避率", "持續時間"],
-    levels: Array.from({ length: 20 }, (_, i) => {
-      const val = i + 1;
-      return [val, i < 10 ? 8 : 16, `+${val}`, `+${val}`, `${60 + val * 10}秒`];
-    })
-  },
-  {
-    name: "斷魂箭",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01005.png",
-    max_level: 20,
-    type: "主動",
-    prerequisite: "",
-    description: "發射強力箭矢，造成高傷害。",
-    headers: ["技能等級", "消耗MP", "攻擊力"],
-    levels: Array.from({ length: 20 }, (_, i) => [i + 1, 6 + Math.floor(i / 4), `${141 + i * 5}%`])
-  },
-  {
-    name: "二連箭",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01006.png",
-    max_level: 20,
-    type: "主動",
-    prerequisite: "斷魂箭 LV1",
-    description: "一次發射兩枝箭進行雙重攻擊。",
-    headers: ["技能等級", "消耗MP", "攻擊力"],
-    levels: Array.from({ length: 20 }, (_, i) => [i + 1, 8 + Math.floor(i / 2), `${76 + i * 2}%`])
-  }
-];
+    const skills = [
+      {
+        name: "精準強化",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01001.png",
+        max_level: 16,
+        type: "被動",
+        prerequisite: "",
+        description: "增加命中率。",
+        headers: ["技能等級", "命中率"],
+        levels: Array.from({ length: 16 }, (_, i) => [i + 1, `+${i + 1}`])
+      },
+      {
+        name: "百步穿楊",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01002.png",
+        max_level: 8,
+        type: "被動",
+        prerequisite: "精準強化 LV3",
+        description: "增加弓或弩弓的射程距離。",
+        headers: ["技能等級", "射程"],
+        levels: Array.from({ length: 8 }, (_, i) => [i + 1, `${25 * (i + 1)}%`])
+      },
+      {
+        name: "霸王箭",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01003.png",
+        max_level: 20,
+        type: "被動",
+        prerequisite: "",
+        description: "攻擊中有一定機率發動致命一擊，\n增加固定額外傷害。",
+        headers: ["技能等級", "發動率", "爆擊額外傷害"],
+        levels: Array.from({ length: 20 }, (_, i) => [i + 1, `${2 * (i + 1)}%`, `${5 * (i + 1)}%`])
+      },
+      {
+        name: "集中術",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01004.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "精準強化 LV3",
+        description: "一定時間內增加命中與迴避率。",
+        headers: ["技能等級", "消耗MP", "命中率", "迴避率", "持續時間"],
+        levels: Array.from({ length: 20 }, (_, i) => {
+          const mp = i < 10 ? 8 : 16;
+          const val = i + 1;
+          const time = 60 + val * 10;
+          return [val, mp, `+${val}`, `+${val}`, `${time}秒`];
+        })
+      },
+      {
+        name: "斷魂箭",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01005.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "",
+        description: "發射強力箭矢，造成高傷害。",
+        headers: ["技能等級", "消耗MP", "攻擊力"],
+        levels: Array.from({ length: 20 }, (_, i) => {
+          const mp = 6 + Math.floor(i / 4);
+          const atk = 141 + i * 5;
+          return [i + 1, mp, `${atk}%`];
+        })
+      },
+      {
+        name: "二連箭",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01006.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "斷魂箭 LV1",
+        description: "一次發射兩枝箭進行雙重攻擊。",
+        headers: ["技能等級", "消耗MP", "攻擊力"],
+        levels: Array.from({ length: 20 }, (_, i) => {
+          const mp = 8 + Math.floor(i / 2);
+          const atk = 76 + i * 2;
+          return [i + 1, mp, `${atk}%`];
+        })
+      }
+    ];
 
-const levels = {};
-skills.forEach(skill => levels[skill.name] = 0);
+    const levels = {};
+    skills.forEach(skill => { levels[skill.name] = 0; });
 
-function updatePoints() {
-  const used = Object.values(levels).reduce((a, b) => a + b, 0);
-  document.getElementById("points-remaining").innerText = MAX_POINTS - used;
-}
+    function updatePoints() {
+      const total = Object.values(levels).reduce((a, b) => a + b, 0);
+      usedPoints = total;
+      document.getElementById("points-remaining").innerText = MAX_POINTS - usedPoints;
+      updateUnlockStatus(); // 包含點數回收檢查
+    }
 
-function updateUnlockStatus() {
-  skills.forEach(skill => {
-    const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-    const unlocked = !preSkill || levels[preSkill] >= parseInt(preLevel);
-    const statusDiv = document.getElementById(`unlock-${skill.name}`);
+    function updateUnlockStatus() {
+      skills.forEach(skill => {
+        const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+        const unlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
+        const statusDiv = document.getElementById(`unlock-${skill.name}`);
 
-    // 若不符條件，技能等級歸 0，回收點數與畫面
-    if (!unlocked && levels[skill.name] > 0) {
-      levels[skill.name] = 0;
-      document.getElementById(`level-${skill.name}`).innerText = `Lv. 0`;
-      skill.levels.forEach((_, i) => {
-        const row = document.getElementById(`row-${skill.name}-${i}`);
-        if (row) row.classList.remove("highlight");
+        // 若不再滿足前置條件且已有點數，則強制歸 0
+        if (!unlocked && levels[skill.name] > 0) {
+          levels[skill.name] = 0;
+          document.getElementById(`level-${skill.name}`).innerText = `Lv. 0`;
+          skill.levels.forEach((_, i) => {
+            const row = document.getElementById(`row-${skill.name}-${i}`);
+            if (row) row.classList.remove("highlight");
+          });
+        }
+
+        if (statusDiv) {
+          statusDiv.textContent = `[${unlocked ? "已解鎖🔓" : "未解鎖🔒"}]`;
+          statusDiv.className = `unlock-status ${unlocked ? "unlocked" : "locked"}`;
+        }
       });
     }
 
-    if (statusDiv) {
-      statusDiv.textContent = `[${unlocked ? "已解鎖🔓" : "未解鎖🔒"}]`;
-      statusDiv.className = `unlock-status ${unlocked ? "unlocked" : "locked"}`;
+    function renderSkill(skill) {
+      const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+      const isUnlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
+      const unlockHTML = preSkill
+        ? `<div class="unlock-status ${isUnlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">
+            [${isUnlocked ? "已解鎖🔓" : "未解鎖🔒"}]
+          </div>` : "";
+
+      return `
+        <div class="skill">
+          ${unlockHTML}
+          <div class="skill-header">
+            <img src="${skill.image}" alt="${skill.name}" />
+            <h2>${skill.name}</h2>
+          </div>
+          <table class="meta-table">
+            <tr>
+              <td class="label">類型</td><td>${skill.type}</td>
+              <td class="label">前置技能</td><td colspan="2">${skill.prerequisite || "無"}</td>
+            </tr>
+            <tr class="effect-row">
+              <td class="label">技能效果</td>
+              <td class="effect" colspan="4">${skill.description.replace(/\n/g, "<br>")}</td>
+            </tr>
+          </table>
+          <div class="controls">
+            <button onmousedown="startHold('${skill.name}', -1)" onmouseup="stopHold()" onmouseleave="stopHold()">-</button>
+            <span id="level-${skill.name}">Lv. 0</span>
+            <button onmousedown="startHold('${skill.name}', 1)" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
+          </div>
+          <table class="skill-table">
+            <thead>
+              <tr>${skill.headers.map(h => `<th>${h}</th>`).join('')}</tr>
+            </thead>
+            <tbody>
+              ${skill.levels.map((row, i) =>
+                `<tr id="row-${skill.name}-${i}">${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
+              ).join('')}
+            </tbody>
+          </table>
+        </div>`;
     }
-  });
-  updatePoints();
-}
 
-function changeLevel(name, delta) {
-  const skill = skills.find(s => s.name === name);
-  if (!skill) return;
+    function changeLevel(name, delta) {
+      const skill = skills.find(s => s.name === name);
+      if (!skill) return;
 
-  const newLevel = levels[name] + delta;
-  if (newLevel < 0 || newLevel > skill.max_level) return;
+      const newLevel = levels[name] + delta;
+      if (newLevel < 0 || newLevel > skill.max_level) return;
 
-  const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-  if (reqSkill && levels[reqSkill] < parseInt(reqLv)) {
-    if (lastWarning !== name) {
-      alert(`需要前置技能「${reqSkill}」至少等級 ${reqLv}`);
-      lastWarning = name;
+      const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+      if (reqSkill && levels[reqSkill] < parseInt(reqLv)) {
+        if (lastWarning !== name) {
+          alert(`需要前置技能「${reqSkill}」至少等級 ${reqLv}`);
+          lastWarning = name;
+        }
+        return;
+      }
+
+      const projectedTotal = Object.entries(levels).reduce((sum, [key, val]) => {
+        return sum + (key === name ? newLevel : val);
+      }, 0);
+      if (projectedTotal > MAX_POINTS) {
+        if (lastWarning !== 'overflow') {
+          alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
+          lastWarning = 'overflow';
+        }
+        return;
+      }
+
+      levels[name] = newLevel;
+      document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
+      skill.levels.forEach((_, i) => {
+        const row = document.getElementById(`row-${name}-${i}`);
+        if (row) row.classList.toggle("highlight", i === newLevel - 1);
+      });
+
+      updatePoints();
     }
-    return;
-  }
 
-  const total = Object.entries(levels).reduce((sum, [k, v]) => sum + (k === name ? newLevel : v), 0);
-  if (total > MAX_POINTS) {
-    if (lastWarning !== 'overflow') {
-      alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
-      lastWarning = 'overflow';
+    function startHold(name, delta) {
+      changeLevel(name, delta);
+      holdTimeout = setTimeout(() => {
+        holdInterval = setInterval(() => changeLevel(name, delta), 100);
+      }, 300);
     }
-    return;
-  }
 
-  levels[name] = newLevel;
-  document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
-  skill.levels.forEach((_, i) => {
-    const row = document.getElementById(`row-${name}-${i}`);
-    if (row) row.classList.toggle("highlight", i === newLevel - 1);
-  });
+    function stopHold() {
+      clearTimeout(holdTimeout);
+      clearInterval(holdInterval);
+      holdTimeout = null;
+      holdInterval = null;
+    }
 
-  updateUnlockStatus();
-}
+    function renderAll() {
+      document.getElementById("skills-container").innerHTML = skills.map(renderSkill).join('');
+      updatePoints();
+    }
 
-function startHold(name, delta) {
-  changeLevel(name, delta);
-  holdTimeout = setTimeout(() => {
-    holdInterval = setInterval(() => changeLevel(name, delta), 100);
-  }, 300);
-}
-function stopHold() {
-  clearTimeout(holdTimeout);
-  clearInterval(holdInterval);
-  holdTimeout = null;
-  holdInterval = null;
-}
-
-function renderSkill(skill) {
-  const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-  const isUnlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
-  return `
-    <div class="skill">
-      ${preSkill ? `<div class="unlock-status ${isUnlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">
-        [${isUnlocked ? "已解鎖🔓" : "未解鎖🔒"}]
-      </div>` : ""}
-      <div class="skill-header">
-        <img src="${skill.image}" alt="${skill.name}" />
-        <h2>${skill.name}</h2>
-      </div>
-      <table class="meta-table">
-        <tr><td class="label">類型</td><td>${skill.type}</td>
-            <td class="label">前置技能</td><td colspan="2">${skill.prerequisite || "無"}</td></tr>
-        <tr class="effect-row">
-          <td class="label">技能效果</td>
-          <td class="effect" colspan="4">${skill.description.replace(/\n/g, "<br>")}</td>
-        </tr>
-      </table>
-      <div class="controls">
-        <button onmousedown="startHold('${skill.name}', -1)" onmouseup="stopHold()" onmouseleave="stopHold()">-</button>
-        <span id="level-${skill.name}">Lv. 0</span>
-        <button onmousedown="startHold('${skill.name}', 1)" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
-      </div>
-      <table class="skill-table">
-        <thead><tr>${skill.headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
-        <tbody>
-          ${skill.levels.map((row, i) =>
-            `<tr id="row-${skill.name}-${i}">${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`
-          ).join("")}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function renderAll() {
-  document.getElementById("skills-container").innerHTML = skills.map(renderSkill).join('');
-  updateUnlockStatus();
-}
-renderAll();
-</script>
+    renderAll();
+  </script>
 </body>
 </html>
