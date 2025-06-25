@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>弓箭手</title>
+  <title>弓箭手技能模擬器</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -42,7 +42,7 @@
       box-shadow: 0 0 10px #ccc;
       padding: 20px;
       position: relative;
-      flex: 0 0 calc(50% - 20px);
+      flex: 0 0 calc(33.333% - 20px);
       box-sizing: border-box;
     }
     .unlock-status {
@@ -71,17 +71,18 @@
       margin: 0;
     }
     .meta-table, .skill-table {
-     width: auto;              /* ✅ 改為自動寬度 */
-     border-collapse: collapse;
-     margin-top: 10px;
-     margin-left: 0;
-     margin-right: auto;
-}
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      overflow-x: auto;
+      display: block;
+    }
     .meta-table td, .skill-table td, .skill-table th {
       padding: 6px 10px;
       border: 1px solid #ccc;
       text-align: center;
       vertical-align: middle;
+      white-space: nowrap;
     }
     .meta-table td.label {
       background: #e6f5ff;
@@ -122,7 +123,7 @@
   </style>
 </head>
 <body>
-  <h1>弓箭手</h1>
+  <h1>弓箭手技能模擬器</h1>
   <div id="floating-points">可用技能點數：<span id="points-remaining">61</span></div>
   <div id="skills-container" class="skills-grid"></div>
 
@@ -134,80 +135,80 @@
     let lastWarning = '';
 
     const skills = [
-  {
-    name: "精準強化",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01001.png",
-    max_level: 16,
-    type: "被動",
-    prerequisite: "",
-    description: "增加命中率。",
-    headers: ["技能等級", "命中率"],
-    levels: Array.from({ length: 16 }, (_, i) => [i + 1, `+${i + 1}`])
-  },
-  {
-    name: "百步穿楊",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01002.png",
-    max_level: 8,
-    type: "被動",
-    prerequisite: "精準強化 LV3",
-    description: "增加弓或弩弓的射程距離。",
-    headers: ["技能等級", "射程"],
-    levels: Array.from({ length: 8 }, (_, i) => [i + 1, `${25 * (i + 1)}%`])
-  },
-  {
-    name: "霸王箭",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01003.png",
-    max_level: 20,
-    type: "被動",
-    prerequisite: "",
-    description: "攻擊中有一定機率發動致命一擊，\n增加固定額外傷害。",
-    headers: ["技能等級", "發動率", "爆擊額外傷害"],
-    levels: Array.from({ length: 20 }, (_, i) => [i + 1, `${2 * (i + 1)}%`, `${5 * (i + 1)}%`])
-  },
-  {
-    name: "集中術",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01004.png",
-    max_level: 20,
-    type: "主動",
-    prerequisite: "精準強化 LV3",
-    description: "一定時間內增加命中與迴避率。",
-    headers: ["技能等級", "消耗MP", "命中率", "迴避率", "持續時間"],
-    levels: Array.from({ length: 20 }, (_, i) => {
-      const val = i + 1;
-      return [val, i < 10 ? 8 : 16, `+${val}`, `+${val}`, `${60 + val * 10}秒`];
-    })
-  },
-  {
-    name: "斷魂箭",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01005.png",
-    max_level: 20,
-    type: "主動",
-    prerequisite: "",
-    description: "發射強力箭矢，造成高傷害。",
-    headers: ["技能等級", "消耗MP", "攻擊力"],
-    levels: [
-      [1, 6, "141%"], [2, 6, "146%"], [3, 6, "151%"], [4, 6, "156%"], [5, 7, "164%"],
-      [6, 7, "169%"], [7, 7, "174%"], [8, 8, "182%"], [9, 8, "187%"], [10, 9, "195%"],
-      [11, 9, "200%"], [12, 10, "208%"], [13, 10, "213%"], [14, 11, "221%"], [15, 11, "226%"],
-      [16, 12, "234%"], [17, 12, "239%"], [18, 13, "247%"], [19, 13, "252%"], [20, 14, "260%"]
-    ]
-  },
-  {
-    name: "二連箭",
-    image: "https://maple.yampiz.com/maple/custom/skill/sk_01006.png",
-    max_level: 20,
-    type: "主動",
-    prerequisite: "斷魂箭 LV1",
-    description: "一次發射兩枝箭進行雙重攻擊。",
-    headers: ["技能等級", "消耗MP", "攻擊力"],
-    levels: [
-      [1, 8, "76% x2"], [2, 8, "78% x2"], [3, 8, "80% x2"], [4, 8, "82% x2"], [5, 9, "86% x2"],
-      [6, 9, "88% x2"], [7, 9, "90% x2"], [8, 10, "94% x2"], [9, 10, "96% x2"], [10, 11, "100% x2"],
-      [11, 11, "102% x2"], [12, 12, "106% x2"], [13, 12, "108% x2"], [14, 13, "112% x2"], [15, 13, "114% x2"],
-      [16, 14, "118% x2"], [17, 14, "120% x2"], [18, 15, "124% x2"], [19, 15, "126% x2"], [20, 16, "130% x2"]
-    ]
-  }
-];
+      {
+        name: "精準強化",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01001.png",
+        max_level: 16,
+        type: "被動",
+        prerequisite: "",
+        description: "增加命中率。",
+        headers: ["技能等級", "命中率"],
+        levels: Array.from({ length: 16 }, (_, i) => [i + 1, `+${i + 1}`])
+      },
+      {
+        name: "百步穿楊",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01002.png",
+        max_level: 8,
+        type: "被動",
+        prerequisite: "精準強化 LV3",
+        description: "增加弓或弩弓的射程距離。",
+        headers: ["技能等級", "射程"],
+        levels: Array.from({ length: 8 }, (_, i) => [i + 1, `${25 * (i + 1)}%`])
+      },
+      {
+        name: "霸王箭",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01003.png",
+        max_level: 20,
+        type: "被動",
+        prerequisite: "",
+        description: "攻擊中有一定機率發動致命一擊，\n增加固定額外傷害。",
+        headers: ["技能等級", "發動率", "爆擊額外傷害"],
+        levels: Array.from({ length: 20 }, (_, i) => [i + 1, `${2 * (i + 1)}%`, `${5 * (i + 1)}%`])
+      },
+      {
+        name: "集中術",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01004.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "精準強化 LV3",
+        description: "一定時間內增加命中與迴避率。",
+        headers: ["技能等級", "消耗MP", "命中率", "迴避率", "持續時間"],
+        levels: Array.from({ length: 20 }, (_, i) => {
+          const val = i + 1;
+          return [val, i < 10 ? 8 : 16, `+${val}`, `+${val}`, `${60 + val * 10}秒`];
+        })
+      },
+      {
+        name: "斷魂箭",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01005.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "",
+        description: "發射強力箭矢，造成高傷害。",
+        headers: ["技能等級", "消耗MP", "攻擊力"],
+        levels: [
+          [1, 6, "141%"], [2, 6, "146%"], [3, 6, "151%"], [4, 6, "156%"], [5, 7, "164%"],
+          [6, 7, "169%"], [7, 7, "174%"], [8, 8, "182%"], [9, 8, "187%"], [10, 9, "195%"],
+          [11, 9, "200%"], [12, 10, "208%"], [13, 10, "213%"], [14, 11, "221%"], [15, 11, "226%"],
+          [16, 12, "234%"], [17, 12, "239%"], [18, 13, "247%"], [19, 13, "252%"], [20, 14, "260%"]
+        ]
+      },
+      {
+        name: "二連箭",
+        image: "https://maple.yampiz.com/maple/custom/skill/sk_01006.png",
+        max_level: 20,
+        type: "主動",
+        prerequisite: "斷魂箭 LV1",
+        description: "一次發射兩枝箭進行雙重攻擊。",
+        headers: ["技能等級", "消耗MP", "攻擊力"],
+        levels: [
+          [1, 8, "76% x2"], [2, 8, "78% x2"], [3, 8, "80% x2"], [4, 8, "82% x2"], [5, 9, "86% x2"],
+          [6, 9, "88% x2"], [7, 9, "90% x2"], [8, 10, "94% x2"], [9, 10, "96% x2"], [10, 11, "100% x2"],
+          [11, 11, "102% x2"], [12, 12, "106% x2"], [13, 12, "108% x2"], [14, 13, "112% x2"], [15, 13, "114% x2"],
+          [16, 14, "118% x2"], [17, 14, "120% x2"], [18, 15, "124% x2"], [19, 15, "126% x2"], [20, 16, "130% x2"]
+        ]
+      }
+    ];
 
     const levels = {};
     skills.forEach(skill => { levels[skill.name] = 0; });
@@ -216,7 +217,7 @@
       const total = Object.values(levels).reduce((a, b) => a + b, 0);
       usedPoints = total;
       document.getElementById("points-remaining").innerText = MAX_POINTS - usedPoints;
-      updateUnlockStatus(); // 包含點數回收檢查
+      updateUnlockStatus();
     }
 
     function updateUnlockStatus() {
@@ -225,7 +226,6 @@
         const unlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
         const statusDiv = document.getElementById(`unlock-${skill.name}`);
 
-        // 若不再滿足前置條件且已有點數，則強制歸 0
         if (!unlocked && levels[skill.name] > 0) {
           levels[skill.name] = 0;
           document.getElementById(`level-${skill.name}`).innerText = `Lv. 0`;
@@ -246,9 +246,7 @@
       const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
       const isUnlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
       const unlockHTML = preSkill
-        ? `<div class="unlock-status ${isUnlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">
-            [${isUnlocked ? "已解鎖🔓" : "未解鎖🔒"}]
-          </div>` : "";
+        ? `<div class="unlock-status ${isUnlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">[${isUnlocked ? "已解鎖🔓" : "未解鎖🔒"}]</div>` : "";
 
       return `
         <div class="skill">
@@ -273,9 +271,7 @@
             <button onmousedown="startHold('${skill.name}', 1)" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
           </div>
           <table class="skill-table">
-            <thead>
-              <tr>${skill.headers.map(h => `<th>${h}</th>`).join('')}</tr>
-            </thead>
+            <thead><tr>${skill.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
             <tbody>
               ${skill.levels.map((row, i) =>
                 `<tr id="row-${skill.name}-${i}">${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
@@ -301,9 +297,8 @@
         return;
       }
 
-      const projectedTotal = Object.entries(levels).reduce((sum, [key, val]) => {
-        return sum + (key === name ? newLevel : val);
-      }, 0);
+      const projectedTotal = Object.entries(levels).reduce((sum, [key, val]) =>
+        sum + (key === name ? newLevel : val), 0);
       if (projectedTotal > MAX_POINTS) {
         if (lastWarning !== 'overflow') {
           alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
