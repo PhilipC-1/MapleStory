@@ -134,80 +134,80 @@
     let lastWarning = '';
 
     const skills = [
-      {
-        name: "精準強化",
-        image: "https://maple.yampiz.com/maple/custom/skill/sk_01001.png",
-        max_level: 16,
-        type: "被動",
-        prerequisite: "",
-        description: "增加命中率。",
-        headers: ["技能等級", "命中率"],
-        levels: Array.from({ length: 16 }, (_, i) => [i + 1, `+${i + 1}`])
-      },
-      {
-        name: "百步穿楊",
-        image: "https://maple.yampiz.com/maple/custom/skill/sk_01002.png",
-        max_level: 8,
-        type: "被動",
-        prerequisite: "精準強化 LV3",
-        description: "增加弓或弩弓的射程距離。",
-        headers: ["技能等級", "射程"],
-        levels: Array.from({ length: 8 }, (_, i) => [i + 1, `${25 * (i + 1)}%`])
-      },
-      {
-        name: "霸王箭",
-        image: "https://maple.yampiz.com/maple/custom/skill/sk_01003.png",
-        max_level: 20,
-        type: "被動",
-        prerequisite: "",
-        description: "攻擊中有一定機率發動致命一擊，\n增加固定額外傷害。",
-        headers: ["技能等級", "發動率", "爆擊額外傷害"],
-        levels: Array.from({ length: 20 }, (_, i) => [i + 1, `${2 * (i + 1)}%`, `${5 * (i + 1)}%`])
-      },
-      {
-        name: "集中術",
-        image: "https://maple.yampiz.com/maple/custom/skill/sk_01004.png",
-        max_level: 20,
-        type: "主動",
-        prerequisite: "精準強化 LV3",
-        description: "一定時間內增加命中與迴避率。",
-        headers: ["技能等級", "消耗MP", "命中率", "迴避率", "持續時間"],
-        levels: Array.from({ length: 20 }, (_, i) => {
-          const mp = i < 10 ? 8 : 16;
-          const val = i + 1;
-          const time = 60 + val * 10;
-          return [val, mp, `+${val}`, `+${val}`, `${time}秒`];
-        })
-      },
-      {
-        name: "斷魂箭",
-        image: "https://maple.yampiz.com/maple/custom/skill/sk_01005.png",
-        max_level: 20,
-        type: "主動",
-        prerequisite: "",
-        description: "發射強力箭矢，造成高傷害。",
-        headers: ["技能等級", "消耗MP", "攻擊力"],
-        levels: Array.from({ length: 20 }, (_, i) => {
-          const mp = 6 + Math.floor(i / 4);
-          const atk = 141 + i * 5;
-          return [i + 1, mp, `${atk}%`];
-        })
-      },
-      {
-        name: "二連箭",
-        image: "https://maple.yampiz.com/maple/custom/skill/sk_01006.png",
-        max_level: 20,
-        type: "主動",
-        prerequisite: "斷魂箭 LV1",
-        description: "一次發射兩枝箭進行雙重攻擊。",
-        headers: ["技能等級", "消耗MP", "攻擊力"],
-        levels: Array.from({ length: 20 }, (_, i) => {
-          const mp = 8 + Math.floor(i / 2);
-          const atk = 76 + i * 2;
-          return [i + 1, mp, `${atk}%`];
-        })
-      }
-    ];
+  {
+    name: "精準強化",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01001.png",
+    max_level: 16,
+    type: "被動",
+    prerequisite: "",
+    description: "增加命中率。",
+    headers: ["技能等級", "命中率"],
+    levels: Array.from({ length: 16 }, (_, i) => [i + 1, `+${i + 1}`])
+  },
+  {
+    name: "百步穿楊",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01002.png",
+    max_level: 8,
+    type: "被動",
+    prerequisite: "精準強化 LV3",
+    description: "增加弓或弩弓的射程距離。",
+    headers: ["技能等級", "射程"],
+    levels: Array.from({ length: 8 }, (_, i) => [i + 1, `${25 * (i + 1)}%`])
+  },
+  {
+    name: "霸王箭",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01003.png",
+    max_level: 20,
+    type: "被動",
+    prerequisite: "",
+    description: "攻擊中有一定機率發動致命一擊，\n增加固定額外傷害。",
+    headers: ["技能等級", "發動率", "爆擊額外傷害"],
+    levels: Array.from({ length: 20 }, (_, i) => [i + 1, `${2 * (i + 1)}%`, `${5 * (i + 1)}%`])
+  },
+  {
+    name: "集中術",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01004.png",
+    max_level: 20,
+    type: "主動",
+    prerequisite: "精準強化 LV3",
+    description: "一定時間內增加命中與迴避率。",
+    headers: ["技能等級", "消耗MP", "命中率", "迴避率", "持續時間"],
+    levels: Array.from({ length: 20 }, (_, i) => {
+      const val = i + 1;
+      return [val, i < 10 ? 8 : 16, `+${val}`, `+${val}`, `${60 + val * 10}秒`];
+    })
+  },
+  {
+    name: "斷魂箭",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01005.png",
+    max_level: 20,
+    type: "主動",
+    prerequisite: "",
+    description: "發射強力箭矢，造成高傷害。",
+    headers: ["技能等級", "消耗MP", "攻擊力"],
+    levels: [
+      [1, 6, "141%"], [2, 6, "146%"], [3, 6, "151%"], [4, 6, "156%"], [5, 7, "164%"],
+      [6, 7, "169%"], [7, 7, "174%"], [8, 8, "182%"], [9, 8, "187%"], [10, 9, "195%"],
+      [11, 9, "200%"], [12, 10, "208%"], [13, 10, "213%"], [14, 11, "221%"], [15, 11, "226%"],
+      [16, 12, "234%"], [17, 12, "239%"], [18, 13, "247%"], [19, 13, "252%"], [20, 14, "260%"]
+    ]
+  },
+  {
+    name: "二連箭",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01006.png",
+    max_level: 20,
+    type: "主動",
+    prerequisite: "斷魂箭 LV1",
+    description: "一次發射兩枝箭進行雙重攻擊。",
+    headers: ["技能等級", "消耗MP", "攻擊力"],
+    levels: [
+      [1, 8, "76% x2"], [2, 8, "78% x2"], [3, 8, "80% x2"], [4, 8, "82% x2"], [5, 9, "86% x2"],
+      [6, 9, "88% x2"], [7, 9, "90% x2"], [8, 10, "94% x2"], [9, 10, "96% x2"], [10, 11, "100% x2"],
+      [11, 11, "102% x2"], [12, 12, "106% x2"], [13, 12, "108% x2"], [14, 13, "112% x2"], [15, 13, "114% x2"],
+      [16, 14, "118% x2"], [17, 14, "120% x2"], [18, 15, "124% x2"], [19, 15, "126% x2"], [20, 16, "130% x2"]
+    ]
+  }
+];
 
     const levels = {};
     skills.forEach(skill => { levels[skill.name] = 0; });
