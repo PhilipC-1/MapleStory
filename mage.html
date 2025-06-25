@@ -2,25 +2,44 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>法師技能模擬器</title>
+  <title>法師</title>
   <style>
     body {
-      font-family: "Arial", sans-serif;
+      font-family: Arial, sans-serif;
       background: #f9f9f9;
       padding: 20px;
       color: #333;
+      font-weight: bold;
+      overflow-x: hidden;
     }
     h1 {
       text-align: center;
       margin-bottom: 30px;
     }
+    #floating-points {
+      position: fixed;
+      top: 100px;
+      left: 20px;
+      background: #fff;
+      padding: 10px 20px;
+      border: 2px solid #bbb;
+      border-radius: 10px;
+      font-size: 20px;
+      z-index: 999;
+    }
+    #points-remaining {
+      color: red;
+    }
     .skill {
       background: #fff;
       border-radius: 8px;
       box-shadow: 0 0 10px #ccc;
-      margin: 20px auto;
-      max-width: 900px;
+      margin: 20px;
+      max-width: 48%;
       padding: 20px;
+      position: relative;
+      display: inline-block;
+      vertical-align: top;
     }
     .skill-header {
       display: flex;
@@ -34,17 +53,33 @@
     .skill-header h2 {
       margin: 0;
     }
-    .skill-info {
+    .meta-table, .skill-table {
+      width: auto;
+      margin-left: 0;
+      margin-right: auto;
+      border-collapse: collapse;
       margin-top: 10px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #000;
-      background-color: #e6f5ff;
+    }
+    .meta-table td, .skill-table td, .skill-table th {
       padding: 6px 10px;
-      border-radius: 6px;
+      border: 1px solid #ccc;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .meta-table td.label {
+      background: #e6f5ff;
+      width: 100px;
+    }
+    .effect-row td.label {
+      background: #fff8dc;
+    }
+    .effect-row td.effect {
+      background: #fff;
+      white-space: pre-wrap;
     }
     .controls {
       margin-top: 15px;
+      text-align: left;
     }
     button {
       font-size: 18px;
@@ -55,247 +90,204 @@
       color: white;
       border: none;
       border-radius: 6px;
+      font-weight: bold;
     }
     button:disabled {
       background-color: #ccc;
       cursor: not-allowed;
     }
-    .desc {
-      margin-top: 10px;
-      font-size: 22px;
-      font-weight: bold;
-    }
-    #points-remaining {
-      text-align: center;
-      font-size: 30px;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    #remaining {
-      color: red;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    thead tr {
-      background-color: #e6e0f8; /* 淡紫色 */
-    }
-    th,
-    td {
-      border: 1px solid #bbb;
-      padding: 6px;
-      text-align: center;
+    .skill-table th {
+      background-color: #f3e6ff;
     }
     tr.highlight {
       background-color: #d4f0ff;
-      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>法師技能模擬器</h1>
-  <div id="points-remaining">
-    可用技能點數：<span id="remaining">67</span>
-  </div>
+  <h1>法師</h1>
+  <div id="floating-points">可用技能點數：<span id="points-remaining">67</span></div>
   <div id="skills-container"></div>
 
-  <script>
-    const maxPoints = 67;
-    let usedPoints = 0;
-    let holdInterval = null;
+<script>
+const MAX_POINTS = 67;
+let holdTimeout = null;
+let holdInterval = null;
+let lastWarning = '';
 
-    const skills = [
-      {
-        name: "魔力淨化",
-        image:
-          "https://maple.yampiz.com/maple/custom/skill/sk_01007.png",
-        max_level: 16,
-        type: "被動",
-        prerequisite: "",
-        description: "技能效果：每10秒鐘可恢復更多量的MP。",
-        headers: ["MP追加回復量"],
-        levels: Array.from({ length: 16 }, (_, i) => [
-          `${((i + 1) * 0.1).toFixed(1)}x角色等級+3`,
-        ]),
-      },
-      {
-        name: "魔力擴展",
-        image:
-          "https://maple.yampiz.com/maple/custom/skill/sk_01008.png",
-        max_level: 10,
-        type: "被動",
-        prerequisite: "魔力淨化 5",
-        description: "技能效果：當等級提升時，MP的最大追加量。",
-        headers: ["升級追加量"],
-        levels: Array.from({ length: 10 }, (_, i) => [
-          ((i + 1) * 2).toString(),
-        ]),
-      },
-      {
-        name: "魔心防禦",
-        image:
-          "https://maple.yampiz.com/maple/custom/skill/sk_01009.png",
-        max_level: 20,
-        type: "主動",
-        prerequisite: "",
-        description:
-          "技能效果：一定的時間內，依比例用MP來帶替傷害所耗損的HP生命值。<br>但若MP達到0時，則直接消耗HP。",
-        headers: ["消耗MP", "持續時間", "替代率"],
-        levels: [
-          ...Array.from({ length: 10 }, (_, i) => [
-            "6",
-            `${30 * (i + 1)}秒`,
-            `${23 + i * 3}%`,
-          ]),
-          ...Array.from({ length: 10 }, (_, i) => [
-            "12",
-            `${330 + i * 30}秒`,
-            `${53 + i * 3}%`,
-          ]),
-        ],
-      },
-      {
-        name: "魔力之盾",
-        image:
-          "https://maple.yampiz.com/maple/custom/skill/sk_01010.png",
-        max_level: 20,
-        type: "主動",
-        prerequisite: "魔心防禦 3",
-        description:
-          "技能效果：一定時間內把魔力集中在盔甲上。<br>提高物理防禦力。",
-        headers: ["消耗MP", "持續時間", "防禦力"],
-        levels: [
-          ...Array.from({ length: 10 }, (_, i) => [
-            "8",
-            `${20 * (i + 1)}秒`,
-            `+${(i + 1) * 2}`,
-          ]),
-          ...Array.from({ length: 10 }, (_, i) => [
-            "16",
-            `${220 + i * 20}秒`,
-            `+${22 + i * 2}`,
-          ]),
-        ],
-      },
-      {
-        name: "魔靈彈",
-        image:
-          "https://maple.yampiz.com/maple/custom/skill/sk_01011.png",
-        max_level: 20,
-        type: "主動",
-        prerequisite: "",
-        description: "技能效果：消耗MP來攻擊單一個怪物。",
-        headers: ["消耗MP", "攻擊力", "熟練度"],
-        levels: Array.from({ length: 20 }, (_, i) => {
-          const mp = i < 10 ? 7 : 14;
-          const atk = 17 + i * 2;
-          const mastery = 15 + Math.floor(i / 2) * 5;
-          return [mp.toString(), atk.toString(), `${mastery}%`];
-        }),
-      },
-      {
-        name: "魔力爪",
-        image:
-          "https://maple.yampiz.com/maple/custom/skill/sk_01012.png",
-        max_level: 20,
-        type: "主動",
-        prerequisite: "魔靈彈 1",
-        description:
-          "技能效果：消耗MP來對同一個怪物發動兩次的連續攻擊。",
-        headers: ["消耗MP", "攻擊力", "熟練度"],
-        levels: Array.from({ length: 20 }, (_, i) => {
-          const mp = i < 10 ? 10 : 20;
-          const atk = 6 + i;
-          const mastery = 15 + Math.floor(i / 2) * 5;
-          return [mp.toString(), atk.toString(), `${mastery}%`];
-        }),
-      },
-    ];
+const atkList = [6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40];
 
-    const levels = {};
-    skills.forEach((s) => (levels[s.name] = 0));
+const skills = [
+  {
+    name: "魔力淨化",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01007.png",
+    max_level: 16,
+    type: "被動",
+    prerequisite: "",
+    description: "每10秒恢復額外MP。",
+    headers: ["技能等級", "MP追加回復量"],
+    levels: Array.from({ length: 16 }, (_, i) => [i + 1, `${((i + 1) * 0.1).toFixed(1)}x角色等級+3`])
+  },
+  {
+    name: "魔力擴展",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01008.png",
+    max_level: 10,
+    type: "被動",
+    prerequisite: "魔力淨化 LV5",
+    description: "增加最大MP值。",
+    headers: ["技能等級", "MP追加值"],
+    levels: Array.from({ length: 10 }, (_, i) => [i + 1, `${(i + 1) * 2}`])
+  },
+  {
+    name: "魔心防禦",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01009.png",
+    max_level: 20,
+    type: "主動",
+    prerequisite: "",
+    description: "用MP代替所受傷害。",
+    headers: ["技能等級", "消耗MP", "持續時間", "替代率"],
+    levels: [
+      ...Array.from({ length: 10 }, (_, i) => [i + 1, 6, `${30 * (i + 1)}秒`, `${23 + i * 3}%`]),
+      ...Array.from({ length: 10 }, (_, i) => [i + 11, 12, `${330 + i * 30}秒`, `${53 + i * 3}%`])
+    ]
+  },
+  {
+    name: "魔力之盾",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01010.png",
+    max_level: 20,
+    type: "主動",
+    prerequisite: "魔心防禦 LV3",
+    description: "提升物理防禦。",
+    headers: ["技能等級", "消耗MP", "持續時間", "防禦力"],
+    levels: [
+      ...Array.from({ length: 10 }, (_, i) => [i + 1, 8, `${20 * (i + 1)}秒`, `+${(i + 1) * 2}`]),
+      ...Array.from({ length: 10 }, (_, i) => [i + 11, 16, `${220 + i * 20}秒`, `+${22 + i * 2}`])
+    ]
+  },
+  {
+    name: "魔靈彈",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01011.png",
+    max_level: 20,
+    type: "主動",
+    prerequisite: "",
+    description: "消耗MP攻擊單體。",
+    headers: ["技能等級", "消耗MP", "攻擊力", "熟練度"],
+    levels: Array.from({ length: 20 }, (_, i) => {
+      const mp = i < 10 ? 7 : 14;
+      const atk = 17 + i * 2;
+      const mastery = 15 + Math.floor(i / 2) * 5;
+      return [i + 1, mp, atk, `${mastery}%`];
+    })
+  },
+  {
+    name: "魔力爪",
+    image: "https://maple.yampiz.com/maple/custom/skill/sk_01012.png",
+    max_level: 20,
+    type: "主動",
+    prerequisite: "魔靈彈 LV1",
+    description: "消耗MP對同一目標造成2次攻擊。",
+    headers: ["技能等級", "消耗MP", "攻擊力", "熟練度"],
+    levels: Array.from({ length: 20 }, (_, i) => {
+      const mp = i < 10 ? 10 : 20;
+      const atk = atkList[i];
+      const mastery = 15 + Math.floor(i / 2) * 5;
+      return [i + 1, mp, atk, `${mastery}%`];
+    })
+  }
+];
 
-    function updatePoints() {
-      const total = skills.reduce((sum, s) => sum + levels[s.name], 0);
-      usedPoints = total;
-      document.getElementById("remaining").innerText = maxPoints - usedPoints;
+const levels = {};
+skills.forEach(skill => levels[skill.name] = 0);
+
+function updatePoints() {
+  const used = Object.values(levels).reduce((a, b) => a + b, 0);
+  document.getElementById("points-remaining").innerText = MAX_POINTS - used;
+}
+
+function changeLevel(name, delta) {
+  const skill = skills.find(s => s.name === name);
+  if (!skill) return;
+
+  const newLevel = levels[name] + delta;
+  if (newLevel < 0 || newLevel > skill.max_level) return;
+
+  const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+  if (reqSkill && levels[reqSkill] < parseInt(reqLv)) {
+    if (lastWarning !== name) {
+      alert(`需要前置技能「${reqSkill}」至少等級 ${reqLv}`);
+      lastWarning = name;
     }
+    return;
+  }
 
-    function renderSkill(skill) {
-      let html = `
+  const total = Object.entries(levels).reduce((sum, [k, v]) => sum + (k === name ? newLevel : v), 0);
+  if (total > MAX_POINTS) {
+    if (lastWarning !== 'overflow') {
+      alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
+      lastWarning = 'overflow';
+    }
+    return;
+  }
+
+  levels[name] = newLevel;
+  document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
+  skill.levels.forEach((_, i) => {
+    const row = document.getElementById(`row-${name}-${i}`);
+    if (row) row.classList.toggle("highlight", i === newLevel - 1);
+  });
+
+  updatePoints();
+}
+
+function startHold(name, delta) {
+  changeLevel(name, delta);
+  holdTimeout = setTimeout(() => {
+    holdInterval = setInterval(() => changeLevel(name, delta), 100);
+  }, 300);
+}
+function stopHold() {
+  clearTimeout(holdTimeout);
+  clearInterval(holdInterval);
+  holdTimeout = null;
+  holdInterval = null;
+}
+
+function renderSkill(skill) {
+  return `
     <div class="skill">
       <div class="skill-header">
         <img src="${skill.image}" alt="${skill.name}" />
         <h2>${skill.name}</h2>
       </div>
-      <div class="skill-info">
-        類型：${skill.type}　前置技能：${skill.prerequisite || "無"}
-      </div>
-      <div class="desc">${skill.description}</div>
+      <table class="meta-table">
+        <tr><td class="label">類型</td><td>${skill.type}</td>
+            <td class="label">前置技能</td><td colspan="2">${skill.prerequisite || "無"}</td></tr>
+        <tr class="effect-row">
+          <td class="label">技能效果</td>
+          <td class="effect" colspan="4">${skill.description.replace(/\n/g, "<br>")}</td>
+        </tr>
+      </table>
       <div class="controls">
-        <button onmousedown="startHold('${skill.name}', -1)" onmouseup="stopHold()" onmouseleave="stopHold()">-</button>
+        <button onmousedown="startHold('${skill.name}', -1')" onmouseup="stopHold()" onmouseleave="stopHold()">-</button>
         <span id="level-${skill.name}">Lv. 0</span>
-        <button onmousedown="startHold('${skill.name}', 1)" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
+        <button onmousedown="startHold('${skill.name}', 1')" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
       </div>
-      <table>
-        <thead><tr><th>技能等級</th>${skill.headers
-          .map((h) => `<th>${h}</th>`)
-          .join("")}</tr></thead>
+      <table class="skill-table">
+        <thead><tr>${skill.headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
         <tbody>
-          ${skill.levels
-            .map(
-              (row, i) =>
-                `<tr id="row-${skill.name}-${i}"><td>${i + 1}</td>${row
-                  .map((cell) => `<td>${cell}</td>`)
-                  .join("")}</tr>`
-            )
-            .join("")}
+          ${skill.levels.map((row, i) =>
+            `<tr id="row-${skill.name}-${i}">${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`
+          ).join("")}
         </tbody>
       </table>
     </div>`;
-      return html;
-    }
+}
 
-    function changeLevel(name, delta) {
-      const skill = skills.find((s) => s.name === name);
-      let newLevel = levels[name] + delta;
-      if (newLevel < 0) newLevel = 0;
-      if (newLevel > skill.max_level) newLevel = skill.max_level;
-
-      if (skill.prerequisite) {
-        const [reqName, reqLv] = skill.prerequisite.split(" ");
-        if ((levels[reqName] || 0) < parseInt(reqLv)) return;
-      }
-
-      const total = skills.reduce(
-        (sum, s) => sum + (s.name === name ? newLevel : levels[s.name]),
-        0
-      );
-      if (total > maxPoints) return;
-      levels[name] = newLevel;
-      document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
-      skill.levels.forEach((_, i) => {
-        const row = document.getElementById(`row-${name}-${i}`);
-        row?.classList.toggle("highlight", i === newLevel - 1);
-      });
-      updatePoints();
-    }
-
-    function startHold(name, delta) {
-      changeLevel(name, delta);
-      holdInterval = setInterval(() => changeLevel(name, delta), 150);
-    }
-
-    function stopHold() {
-      clearInterval(holdInterval);
-    }
-
-    document.getElementById("skills-container").innerHTML = skills
-      .map(renderSkill)
-      .join("");
-    updatePoints();
-  </script>
+function renderAll() {
+  document.getElementById("skills-container").innerHTML = skills.map(renderSkill).join('');
+  updatePoints();
+}
+renderAll();
+</script>
 </body>
 </html>
