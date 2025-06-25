@@ -54,7 +54,7 @@
       font-size: 20px;
     }
     .meta-table, .skill-table {
-      width: 100%;
+      width: auto;
       border-collapse: collapse;
       margin-top: 10px;
     }
@@ -63,6 +63,7 @@
       border: 1px solid #ccc;
       text-align: center;
       vertical-align: middle;
+      white-space: nowrap; /* 防止換行 */
     }
     .meta-table td.label {
       background: #e6f5ff;
@@ -184,9 +185,9 @@
         description: "對單體目標發動兩次連續攻擊。",
         headers: ["技能等級", "消耗MP", "攻擊力", "熟練度"],
         levels: Array.from({ length: 20 }, (_, i) => {
-          const atkList = [5,6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40];
+          const atkList = [6,7,8,9,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40];
           const mp = i < 10 ? 10 : 20;
-          const atk = atkList[i + 1];
+          const atk = atkList[i];
           const mastery = 15 + Math.floor(i / 2) * 5;
           return [i + 1, mp.toString(), atk.toString(), `${mastery}%`];
         })
