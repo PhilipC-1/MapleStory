@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>弓箭手</title>
   <style>
     body {
@@ -10,7 +10,6 @@
       padding: 20px;
       color: #333;
       font-weight: bold;
-      overflow-x: hidden;
     }
     h1 {
       text-align: center;
@@ -26,6 +25,7 @@
       border-radius: 10px;
       font-size: 20px;
       z-index: 999;
+      color: #333;
     }
     #points-remaining {
       color: red;
@@ -41,27 +41,18 @@
       border-radius: 8px;
       box-shadow: 0 0 10px #ccc;
       padding: 20px;
-      width: 30%;
+      width: calc(33.333% - 20px);
       box-sizing: border-box;
-      position: relative;
-      min-width: 280px;
     }
     @media (max-width: 768px) {
       .skill {
-        width: 45%;
+        width: calc(50% - 20px);
       }
     }
-    .unlock-status {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      font-size: 16px;
-    }
-    .unlock-status.locked { color: #a0522d; }
-    .unlock-status.unlocked { color: green; }
     .skill-header {
       display: flex;
       align-items: center;
+      margin-bottom: 10px;
     }
     .skill-header img {
       width: 64px;
@@ -70,11 +61,12 @@
     }
     .skill-header h2 {
       margin: 0;
+      font-size: 20px;
     }
     .meta-table, .skill-table {
       width: 100%;
-      table-layout: fixed;
       border-collapse: collapse;
+      table-layout: fixed;
       margin-top: 10px;
     }
     .meta-table td, .skill-table td, .skill-table th {
@@ -86,7 +78,6 @@
     }
     .meta-table td.label {
       background: #e6f5ff;
-      width: 100px;
     }
     .effect-row td.label {
       background: #fff8dc;
@@ -120,6 +111,13 @@
     tr.highlight {
       background-color: #d4f0ff;
     }
+    .unlock-status {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .unlock-status.locked { color: #a0522d; }
+    .unlock-status.unlocked { color: green; }
   </style>
 </head>
 <body>
@@ -129,10 +127,9 @@
 
   <script>
     const MAX_POINTS = 61;
-    let usedPoints = 0;
-    let holdInterval = null;
-    let holdTimeout = null;
+    let levels = {};
     let lastWarning = '';
+    let holdTimeout = null, holdInterval = null;
 
     const skills = [
       {
@@ -210,39 +207,49 @@
       }
     ];
 
-    const levels = {};
-    skills.forEach(skill => { levels[skill.name] = 0; });
+    skills.forEach(s => levels[s.name] = 0);
 
     function updatePoints() {
-      const total = Object.values(levels).reduce((a, b) => a + b, 0);
-      usedPoints = total;
-      document.getElementById("points-remaining").innerText = MAX_POINTS - usedPoints;
+      const used = Object.values(levels).reduce((a, b) => a + b, 0);
+      document.getElementById("points-remaining").textContent = MAX_POINTS - used;
+    }
+
+    function updateUnlocks() {
+      skills.forEach(skill => {
+        const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+        const unlocked = !reqSkill || levels[reqSkill] >= parseInt(reqLv);
+        const statusEl = document.getElementById(`unlock-${skill.name}`);
+        if (statusEl) {
+          statusEl.textContent = `[${unlocked ? '已解鎖🔓' : '未解鎖🔒'}]`;
+          statusEl.className = `unlock-status ${unlocked ? 'unlocked' : 'locked'}`;
+        }
+        // 如果不再解鎖且技能已加點，強制歸 0
+        if (!unlocked && levels[skill.name] > 0) {
+          levels[skill.name] = 0;
+          document.getElementById(`level-${skill.name}`).textContent = "Lv. 0";
+          skill.levels.forEach((_, i) => {
+            const row = document.getElementById(`row-${skill.name}-${i}`);
+            if (row) row.classList.remove("highlight");
+          });
+        }
+      });
     }
 
     function renderSkill(skill) {
-      const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-      const isUnlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
-      const unlockHTML = preSkill
-        ? `<div class="unlock-status ${isUnlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">
-            [${isUnlocked ? "已解鎖🔓" : "未解鎖🔒"}]
-          </div>` : "";
-
+      const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+      const unlocked = !reqSkill || levels[reqSkill] >= parseInt(reqLv);
       return `
         <div class="skill">
-          ${unlockHTML}
+          <div class="unlock-status ${unlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">
+            [${unlocked ? '已解鎖🔓' : '未解鎖🔒'}]
+          </div>
           <div class="skill-header">
-            <img src="${skill.image}" alt="${skill.name}" />
+            <img src="${skill.image}" />
             <h2>${skill.name}</h2>
           </div>
           <table class="meta-table">
-            <tr>
-              <td class="label">類型</td><td>${skill.type}</td>
-              <td class="label">前置技能</td><td colspan="2">${skill.prerequisite || "無"}</td>
-            </tr>
-            <tr class="effect-row">
-              <td class="label">技能效果</td>
-              <td class="effect" colspan="4">${skill.description.replace(/\n/g, "<br>")}</td>
-            </tr>
+            <tr><td class="label">類型</td><td>${skill.type}</td><td class="label">前置技能</td><td colspan="2">${skill.prerequisite || "無"}</td></tr>
+            <tr class="effect-row"><td class="label">技能效果</td><td class="effect" colspan="4">${skill.description.replace(/\n/g, "<br>")}</td></tr>
           </table>
           <div class="controls">
             <button onmousedown="startHold('${skill.name}', -1)" onmouseup="stopHold()" onmouseleave="stopHold()">-</button>
@@ -250,13 +257,9 @@
             <button onmousedown="startHold('${skill.name}', 1)" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
           </div>
           <table class="skill-table">
-            <thead>
-              <tr>${skill.headers.map(h => `<th>${h}</th>`).join('')}</tr>
-            </thead>
-            <tbody>
-              ${skill.levels.map((row, i) =>
-                `<tr id="row-${skill.name}-${i}">${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
-              ).join('')}
+            <thead><tr>${skill.headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+            <tbody>${skill.levels.map((row, i) =>
+              `<tr id="row-${skill.name}-${i}">${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}
             </tbody>
           </table>
         </div>`;
@@ -264,8 +267,6 @@
 
     function changeLevel(name, delta) {
       const skill = skills.find(s => s.name === name);
-      if (!skill) return;
-
       const newLevel = levels[name] + delta;
       if (newLevel < 0 || newLevel > skill.max_level) return;
 
@@ -278,24 +279,24 @@
         return;
       }
 
-      const projectedTotal = Object.entries(levels).reduce((sum, [key, val]) =>
-        sum + (key === name ? newLevel : val), 0);
-      if (projectedTotal > MAX_POINTS) {
-        if (lastWarning !== 'overflow') {
+      const projected = Object.entries(levels).reduce((sum, [k, v]) => sum + (k === name ? newLevel : v), 0);
+      if (projected > MAX_POINTS) {
+        if (lastWarning !== "overflow") {
           alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
-          lastWarning = 'overflow';
+          lastWarning = "overflow";
         }
         return;
       }
 
       levels[name] = newLevel;
-      document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
+      document.getElementById(`level-${name}`).textContent = `Lv. ${newLevel}`;
       skill.levels.forEach((_, i) => {
         const row = document.getElementById(`row-${name}-${i}`);
         if (row) row.classList.toggle("highlight", i === newLevel - 1);
       });
-
+      updateUnlocks();
       updatePoints();
+     
     }
 
     function startHold(name, delta) {
@@ -304,7 +305,6 @@
         holdInterval = setInterval(() => changeLevel(name, delta), 100);
       }, 300);
     }
-
     function stopHold() {
       clearTimeout(holdTimeout);
       clearInterval(holdInterval);
@@ -314,6 +314,7 @@
 
     function renderAll() {
       document.getElementById("skills-container").innerHTML = skills.map(renderSkill).join('');
+      updateUnlocks();
       updatePoints();
     }
 
