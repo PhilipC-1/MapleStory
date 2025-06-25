@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>弓箭手</title>
   <style>
     body {
@@ -10,15 +10,22 @@
       padding: 20px;
       color: #333;
       font-weight: bold;
+      overflow-x: hidden;
     }
     h1 {
       text-align: center;
       margin-bottom: 30px;
     }
     #floating-points {
-      text-align: center;
-      font-size: 22px;
-      margin-bottom: 20px;
+      position: fixed;
+      top: 100px;
+      left: 20px;
+      background: #fff;
+      padding: 10px 20px;
+      border: 2px solid #bbb;
+      border-radius: 10px;
+      font-size: 20px;
+      z-index: 999;
     }
     #points-remaining {
       color: red;
@@ -26,23 +33,22 @@
     .skills-grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
       justify-content: center;
+      gap: 20px;
     }
     .skill {
       background: #fff;
       border-radius: 8px;
       box-shadow: 0 0 10px #ccc;
       padding: 20px;
+      width: 30%;
       box-sizing: border-box;
-      width: calc(33.333% - 20px);
-      min-width: 280px;
-      flex-grow: 1;
       position: relative;
+      min-width: 280px;
     }
     @media (max-width: 768px) {
       .skill {
-        width: calc(50% - 20px);
+        width: 45%;
       }
     }
     .unlock-status {
@@ -50,18 +56,12 @@
       top: 20px;
       right: 20px;
       font-size: 16px;
-      font-weight: bold;
     }
-    .unlock-status.locked {
-      color: #a0522d;
-    }
-    .unlock-status.unlocked {
-      color: green;
-    }
+    .unlock-status.locked { color: #a0522d; }
+    .unlock-status.unlocked { color: green; }
     .skill-header {
       display: flex;
       align-items: center;
-      margin-bottom: 10px;
     }
     .skill-header img {
       width: 64px;
@@ -73,19 +73,16 @@
     }
     .meta-table, .skill-table {
       width: 100%;
+      table-layout: fixed;
       border-collapse: collapse;
       margin-top: 10px;
-      table-layout: fixed;
     }
     .meta-table td, .skill-table td, .skill-table th {
       padding: 6px 10px;
       border: 1px solid #ccc;
       text-align: center;
       vertical-align: middle;
-      word-wrap: break-word;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      word-break: break-word;
     }
     .meta-table td.label {
       background: #e6f5ff;
@@ -205,84 +202,21 @@
         description: "一次發射兩枝箭進行雙重攻擊。",
         headers: ["技能等級", "消耗MP", "攻擊力"],
         levels: [
-          [1, 8, "76% x2"], [2, 8, "78% x2"], [3, 8, "80% x2"], [4, 8, "82% x2"], [5, 9, "86% x2"],
-          [6, 9, "88% x2"], [7, 9, "90% x2"], [8, 10, "94% x2"], [9, 10, "96% x2"], [10, 11, "100% x2"],
-          [11, 11, "102% x2"], [12, 12, "106% x2"], [13, 12, "108% x2"], [14, 13, "112% x2"], [15, 13, "114% x2"],
-          [16, 14, "118% x2"], [17, 14, "120% x2"], [18, 15, "124% x2"], [19, 15, "126% x2"], [20, 16, "130% x2"]
+          [1, 8, "76%"], [2, 8, "78%"], [3, 8, "80%"], [4, 8, "82%"], [5, 9, "86%"],
+          [6, 9, "88%"], [7, 9, "90%"], [8, 10, "94%"], [9, 10, "96%"], [10, 11, "100%"],
+          [11, 11, "102%"], [12, 12, "106%"], [13, 12, "108%"], [14, 13, "112%"], [15, 13, "114%"],
+          [16, 14, "118%"], [17, 14, "120%"], [18, 15, "124%"], [19, 15, "126%"], [20, 16, "130%"]
         ]
       }
     ];
 
     const levels = {};
-    skills.forEach(skill => levels[skill.name] = 0);
+    skills.forEach(skill => { levels[skill.name] = 0; });
 
     function updatePoints() {
       const total = Object.values(levels).reduce((a, b) => a + b, 0);
       usedPoints = total;
       document.getElementById("points-remaining").innerText = MAX_POINTS - usedPoints;
-      updateUnlockStatus();
-    }
-
-    function updateUnlockStatus() {
-      skills.forEach(skill => {
-        const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-        const unlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
-        const statusDiv = document.getElementById(`unlock-${skill.name}`);
-        if (!unlocked && levels[skill.name] > 0) {
-          levels[skill.name] = 0;
-          document.getElementById(`level-${skill.name}`).innerText = `Lv. 0`;
-          skill.levels.forEach((_, i) => {
-            const row = document.getElementById(`row-${skill.name}-${i}`);
-            if (row) row.classList.remove("highlight");
-          });
-        }
-        if (statusDiv) {
-          statusDiv.textContent = `[${unlocked ? "已解鎖🔓" : "未解鎖🔒"}]`;
-          statusDiv.className = `unlock-status ${unlocked ? "unlocked" : "locked"}`;
-        }
-      });
-    }
-
-    function changeLevel(name, delta) {
-      const skill = skills.find(s => s.name === name);
-      if (!skill) return;
-      const newLevel = levels[name] + delta;
-      if (newLevel < 0 || newLevel > skill.max_level) return;
-      const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-      if (reqSkill && levels[reqSkill] < parseInt(reqLv)) {
-        if (lastWarning !== name) {
-          alert(`需要前置技能「${reqSkill}」至少等級 ${reqLv}`);
-          lastWarning = name;
-        }
-        return;
-      }
-      const projectedTotal = Object.entries(levels).reduce((sum, [key, val]) => sum + (key === name ? newLevel : val), 0);
-      if (projectedTotal > MAX_POINTS) {
-        if (lastWarning !== 'overflow') {
-          alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
-          lastWarning = 'overflow';
-        }
-        return;
-      }
-      levels[name] = newLevel;
-      document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
-      skill.levels.forEach((_, i) => {
-        const row = document.getElementById(`row-${name}-${i}`);
-        if (row) row.classList.toggle("highlight", i === newLevel - 1);
-      });
-      updatePoints();
-    }
-
-    function startHold(name, delta) {
-      changeLevel(name, delta);
-      holdTimeout = setTimeout(() => {
-        holdInterval = setInterval(() => changeLevel(name, delta), 100);
-      }, 300);
-    }
-
-    function stopHold() {
-      clearTimeout(holdTimeout);
-      clearInterval(holdInterval);
     }
 
     function renderSkill(skill) {
@@ -292,6 +226,7 @@
         ? `<div class="unlock-status ${isUnlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">
             [${isUnlocked ? "已解鎖🔓" : "未解鎖🔒"}]
           </div>` : "";
+
       return `
         <div class="skill">
           ${unlockHTML}
@@ -325,6 +260,56 @@
             </tbody>
           </table>
         </div>`;
+    }
+
+    function changeLevel(name, delta) {
+      const skill = skills.find(s => s.name === name);
+      if (!skill) return;
+
+      const newLevel = levels[name] + delta;
+      if (newLevel < 0 || newLevel > skill.max_level) return;
+
+      const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+      if (reqSkill && levels[reqSkill] < parseInt(reqLv)) {
+        if (lastWarning !== name) {
+          alert(`需要前置技能「${reqSkill}」至少等級 ${reqLv}`);
+          lastWarning = name;
+        }
+        return;
+      }
+
+      const projectedTotal = Object.entries(levels).reduce((sum, [key, val]) =>
+        sum + (key === name ? newLevel : val), 0);
+      if (projectedTotal > MAX_POINTS) {
+        if (lastWarning !== 'overflow') {
+          alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
+          lastWarning = 'overflow';
+        }
+        return;
+      }
+
+      levels[name] = newLevel;
+      document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
+      skill.levels.forEach((_, i) => {
+        const row = document.getElementById(`row-${name}-${i}`);
+        if (row) row.classList.toggle("highlight", i === newLevel - 1);
+      });
+
+      updatePoints();
+    }
+
+    function startHold(name, delta) {
+      changeLevel(name, delta);
+      holdTimeout = setTimeout(() => {
+        holdInterval = setInterval(() => changeLevel(name, delta), 100);
+      }, 300);
+    }
+
+    function stopHold() {
+      clearTimeout(holdTimeout);
+      clearInterval(holdInterval);
+      holdTimeout = null;
+      holdInterval = null;
     }
 
     function renderAll() {
