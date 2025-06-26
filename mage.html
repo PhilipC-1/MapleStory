@@ -235,34 +235,47 @@
     }
 
     function changeLevel(name, delta) {
-      const skill = skills.find(s => s.name === name);
-      if (!skill) return;
-      const newLevel = levels[name] + delta;
-      if (newLevel < 0 || newLevel > skill.max_level) return;
-      const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-      if (reqSkill && levels[reqSkill] < parseInt(reqLv)) {
-        if (lastWarning !== name) {
-          alert(`需要前置技能「${reqSkill}」至少等級 ${reqLv}`);
-          lastWarning = name;
-        }
-        return;
-      }
-      const total = Object.entries(levels).reduce((sum, [k, v]) => sum + (k === name ? newLevel : v), 0);
-      if (total > MAX_POINTS) {
-        if (lastWarning !== "overflow") {
-          alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
-          lastWarning = "overflow";
-        }
-        return;
-      }
-      levels[name] = newLevel;
-      document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
-      skill.levels.forEach((_, i) => {
-        const row = document.getElementById(`row-${name}-${i}`);
-        if (row) row.classList.toggle("highlight", i === newLevel - 1);
-      });
-      updatePoints();
+  const skill = skills.find(s => s.name === name);
+  if (!skill) return;
+
+  // 預先試算新等級與點數使用量
+  const newLevel = levels[name] + delta;
+  if (newLevel < 0 || newLevel > skill.max_level) return;
+
+  const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+  if (reqSkill && levels[reqSkill] < parseInt(reqLv)) {
+    if (lastWarning !== name) {
+      alert(`需要前置技能「${reqSkill}」至少等級 ${reqLv}`);
+      lastWarning = name;
     }
+    return;
+  }
+
+  const projectedTotal = Object.entries(levels).reduce(
+    (sum, [k, v]) => sum + (k === name ? newLevel : v), 0
+  );
+  if (projectedTotal > MAX_POINTS) {
+    if (lastWarning !== 'overflow') {
+      alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
+      lastWarning = 'overflow';
+    }
+    return;
+  }
+
+  levels[name] = newLevel;
+
+  // ✅ 立即執行前置條件檢查與歸零
+  updateUnlockStatus();
+
+  // 顯示新等級與高亮行
+  document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
+  skill.levels.forEach((_, i) => {
+    const row = document.getElementById(`row-${name}-${i}`);
+    if (row) row.classList.toggle("highlight", i === newLevel - 1);
+  });
+
+  updatePoints(); // 更新總點數與解鎖狀態
+}
 
     function startHold(name, delta) {
       changeLevel(name, delta);
