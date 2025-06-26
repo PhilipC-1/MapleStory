@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>法師</title>
-    <style>
+  <style>
     body {
       font-family: Arial, sans-serif;
       background: #f9f9f9;
@@ -127,10 +127,10 @@
 
   <script>
     const MAX_POINTS = 67;
-    let usedPoints = 0;
-    let holdInterval = null;
     let holdTimeout = null;
+    let holdInterval = null;
     let lastWarning = '';
+    const levels = {};
 
     const skills = [
       {
@@ -161,10 +161,7 @@
         prerequisite: "",
         description: "一定時間內，依比例用MP替代HP受到的傷害，若MP不足則消耗HP。",
         headers: ["技能等級", "消耗MP", "持續時間", "替代率"],
-        levels: [
-          ...Array.from({ length: 10 }, (_, i) => [i + 1, "6", `${30 * (i + 1)}秒`, `${23 + i * 3}%`]),
-          ...Array.from({ length: 10 }, (_, i) => [i + 11, "12", `${330 + i * 30}秒`, `${53 + i * 3}%`])
-        ]
+        levels: Array.from({ length: 20 }, (_, i) => [i + 1, i < 10 ? "6" : "12", `${30 * (i + 1)}秒`, `${23 + i * 3}%`])
       },
       {
         name: "魔力之盾",
@@ -174,10 +171,7 @@
         prerequisite: "魔心防禦 LV3",
         description: "一定時間內將魔力集中於盔甲，增加物理防禦力。",
         headers: ["技能等級", "消耗MP", "持續時間", "防禦力"],
-        levels: [
-          ...Array.from({ length: 10 }, (_, i) => [i + 1, "8", `${20 * (i + 1)}秒`, `+${(i + 1) * 2}`]),
-          ...Array.from({ length: 10 }, (_, i) => [i + 11, "16", `${220 + i * 20}秒`, `+${22 + i * 2}`])
-        ]
+        levels: Array.from({ length: 20 }, (_, i) => [i + 1, i < 10 ? "8" : "16", `${20 * (i + 1)}秒`, `+${(i + 1) * 2}`])
       },
       {
         name: "魔靈彈",
@@ -191,7 +185,7 @@
           const mp = i < 10 ? 7 : 14;
           const atk = 17 + i * 2;
           const mastery = 15 + Math.floor(i / 2) * 5;
-          return [i + 1, mp.toString(), atk.toString(), `${mastery}%`];
+          return [i + 1, mp, atk, `${mastery}%`];
         })
       },
       {
@@ -207,27 +201,24 @@
           const mp = i < 10 ? 10 : 20;
           const atk = atkList[i];
           const mastery = 15 + Math.floor(i / 2) * 5;
-          return [i + 1, mp.toString(), atk.toString(), `${mastery}%`];
+          return [i + 1, mp, atk, `${mastery}%`];
         })
       }
     ];
 
-    const levels = {};
     skills.forEach(skill => levels[skill.name] = 0);
 
     function updatePoints() {
       const total = Object.values(levels).reduce((a, b) => a + b, 0);
-      usedPoints = total;
-      document.getElementById("points-remaining").innerText = MAX_POINTS - usedPoints;
+      document.getElementById("points-remaining").innerText = MAX_POINTS - total;
       updateUnlockStatus();
     }
 
     function updateUnlockStatus() {
       skills.forEach(skill => {
         const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-        const unlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
-        const statusDiv = document.getElementById(`unlock-${skill.name}`);
-
+        const unlocked = !preSkill || levels[preSkill] >= parseInt(preLevel);
+        const status = document.getElementById(`unlock-${skill.name}`);
         if (!unlocked && levels[skill.name] > 0) {
           levels[skill.name] = 0;
           document.getElementById(`level-${skill.name}`).innerText = `Lv. 0`;
@@ -236,60 +227,18 @@
             if (row) row.classList.remove("highlight");
           });
         }
-
-        if (statusDiv) {
-          statusDiv.textContent = `[${unlocked ? "已解鎖🔓" : "未解鎖🔒"}]`;
-          statusDiv.className = `unlock-status ${unlocked ? "unlocked" : "locked"}`;
+        if (status) {
+          status.textContent = `[${unlocked ? "已解鎖🔓" : "未解鎖🔒"}]`;
+          status.className = `unlock-status ${unlocked ? "unlocked" : "locked"}`;
         }
       });
     }
 
-    function renderSkill(skill) {
-      const [preSkill, preLevel] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
-      const isUnlocked = !preSkill || (levels[preSkill] >= parseInt(preLevel));
-      const unlockHTML = preSkill
-        ? `<div class="unlock-status ${isUnlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">
-            [${isUnlocked ? "已解鎖🔓" : "未解鎖🔒"}]
-          </div>` : "";
-
-      return `
-        <div class="skill">
-          ${unlockHTML}
-          <div class="skill-header">
-            <img src="${skill.image}" alt="${skill.name}" />
-            <h2>${skill.name}</h2>
-          </div>
-          <table class="meta-table">
-            <tr>
-              <td class="label">類型</td><td>${skill.type}</td>
-              <td class="label">前置技能</td><td colspan="2">${skill.prerequisite || "無"}</td>
-            </tr>
-            <tr class="effect-row">
-              <td class="label">技能效果</td>
-              <td class="effect" colspan="4">${skill.description.replace(/\n/g, "<br>")}</td>
-            </tr>
-          </table>
-          <div class="controls">
-            <button onmousedown="startHold('${skill.name}', -1)" onmouseup="stopHold()" onmouseleave="stopHold()">-</button>
-            <span id="level-${skill.name}">Lv. 0</span>
-            <button onmousedown="startHold('${skill.name}', 1)" onmouseup="stopHold()" onmouseleave="stopHold()">+</button>
-          </div>
-          <table class="skill-table">
-            <thead><tr>${skill.headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
-            <tbody>
-              ${skill.levels.map((row, i) =>
-                `<tr id="row-${skill.name}-${i}">${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`
-              ).join("")}
-            </tbody>
-          </table>
-        </div>`;
-        }
-
-     function changeLevel(name, delta) {
+    function changeLevel(name, delta) {
       const skill = skills.find(s => s.name === name);
+      if (!skill) return;
       const newLevel = levels[name] + delta;
       if (newLevel < 0 || newLevel > skill.max_level) return;
-
       const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
       if (reqSkill && levels[reqSkill] < parseInt(reqLv)) {
         if (lastWarning !== name) {
@@ -298,29 +247,26 @@
         }
         return;
       }
-
-      const projected = Object.entries(levels).reduce((sum, [k, v]) => sum + (k === name ? newLevel : v), 0);
-      if (projected > MAX_POINTS) {
+      const total = Object.entries(levels).reduce((sum, [k, v]) => sum + (k === name ? newLevel : v), 0);
+      if (total > MAX_POINTS) {
         if (lastWarning !== "overflow") {
           alert(`剩餘點數不足，最多只能使用 ${MAX_POINTS} 點技能點！`);
           lastWarning = "overflow";
         }
         return;
       }
-
       levels[name] = newLevel;
-      document.getElementById(`level-${name}`).textContent = `Lv. ${newLevel}`;
+      document.getElementById(`level-${name}`).innerText = `Lv. ${newLevel}`;
       skill.levels.forEach((_, i) => {
         const row = document.getElementById(`row-${name}-${i}`);
         if (row) row.classList.toggle("highlight", i === newLevel - 1);
       });
-      updateUnlocks();
       updatePoints();
-     
     }
 
     function startHold(name, delta) {
       changeLevel(name, delta);
+      stopHold();
       holdTimeout = setTimeout(() => {
         holdInterval = setInterval(() => changeLevel(name, delta), 100);
       }, 300);
@@ -331,6 +277,36 @@
       clearInterval(holdInterval);
       holdTimeout = null;
       holdInterval = null;
+    }
+
+    function renderSkill(skill) {
+      const [reqSkill, reqLv] = skill.prerequisite?.match(/(.+?) LV(\d+)/)?.slice(1) || [];
+      const unlocked = !reqSkill || levels[reqSkill] >= parseInt(reqLv);
+      return `
+        <div class="skill">
+          ${reqSkill ? `<div class="unlock-status ${unlocked ? 'unlocked' : 'locked'}" id="unlock-${skill.name}">[${unlocked ? "已解鎖🔓" : "未解鎖🔒"}]</div>` : ""}
+          <div class="skill-header">
+            <img src="${skill.image}" alt="${skill.name}" />
+            <h2>${skill.name}</h2>
+          </div>
+          <table class="meta-table">
+            <tr><td class="label">類型</td><td>${skill.type}</td>
+                <td class="label">前置技能</td><td colspan="2">${skill.prerequisite || "無"}</td></tr>
+            <tr class="effect-row"><td class="label">技能效果</td>
+                <td class="effect" colspan="4">${skill.description}</td></tr>
+          </table>
+          <div class="controls">
+            <button onpointerdown="startHold('${skill.name}', -1)" onpointerup="stopHold()" onpointerleave="stopHold()">-</button>
+            <span id="level-${skill.name}">Lv. 0</span>
+            <button onpointerdown="startHold('${skill.name}', 1)" onpointerup="stopHold()" onpointerleave="stopHold()">+</button>
+          </div>
+          <table class="skill-table">
+            <thead><tr>${skill.headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+            <tbody>${skill.levels.map((row, i) =>
+              `<tr id="row-${skill.name}-${i}">${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`
+            ).join("")}</tbody>
+          </table>
+        </div>`;
     }
 
     function renderAll() {
