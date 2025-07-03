@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>補品生存模擬器</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      font-weight: bold;
+      background: #e0f7fa;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background: #1e1e1e;
+      color: #eee;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      font-size: 20px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .input-group input {
+      font-size: 22px;
+      font-weight: bold;
+      padding: 10px;
+      width: 200px;
+      border-radius: 8px;
+    }
+
+    #maxHP { color: red; }
+    #monsterDamage { color: #b266ff; }
+    #healAmount { color: green; }
+
+    button {
+      padding: 10px 16px;
+      font-size: 18px;
+      font-weight: bold;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #0288d1, #03a9f4);
+      color: white;
+    }
+
+    button:hover { opacity: 0.9; }
+    #toggleMode { background: #555; color: #fff; }
+
+    #hpValueText { font-size: 22px; color: red; margin-top: 10px; }
+    #cooldownText { font-size: 20px; color: green; }
+
+    #hpBarContainer {
+      background: #ccc;
+      border-radius: 10px;
+      margin-top: 20px;
+      position: relative;
+      height: 30px;
+      box-shadow: inset 0 0 6px #888;
+    }
+
+    #hpBar {
+      background: #f44336;
+      height: 100%;
+      width: 100%;
+      border-radius: 10px;
+      transition: width 0.3s;
+    }
+
+    #cdBar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 12px;
+      background: #4caf50;
+      width: 0%;
+      border-radius: 0 0 10px 10px;
+      transition: width 0.1s linear;
+    }
+
+    #logArea {
+      background: #fff;
+      padding: 10px;
+      font-family: monospace;
+      margin-top: 20px;
+      border-radius: 10px;
+      height: 160px;
+      overflow-y: scroll;
+    }
+
+    .log-attack { color: #b266ff; }
+    .log-heal { color: green; }
+
+    #tombstone {
+      position: absolute;
+      width: 80px;
+      height: auto;
+      right: -100px;
+      top: -150px;
+      transition: transform 1s ease-in, top 1s ease-in;
+      opacity: 0;
+    }
+
+    .fall {
+      top: 120px;
+      right: 50%;
+      transform: translateX(50%) rotate(10deg);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>補品生存模擬器</h1>
+
+  <div class="input-group"><label>最大血量：</label><input id="maxHP" type="number" value="1000" /></div>
+  <div class="input-group"><label>怪物最大傷害：</label><input id="monsterDamage" type="number" value="500" /></div>
+  <div class="input-group"><label>補品回復量：</label><input id="healAmount" type="number" value="300" /></div>
+
+  <button onclick="simulate()">開始模擬</button>
+  <button onclick="play()">播放動畫</button>
+  <button onclick="reset()">重播</button>
+  <button id="toggleMode" onclick="toggleMode()">切換夜/日模式</button>
+
+  <div id="hpValueText">當前HP: --</div>
+  <div id="cooldownText">補品冷卻倒數：--</div>
+
+  <div id="hpBarContainer">
+    <div id="hpBar"></div>
+    <div id="cdBar"></div>
+  </div>
+
+  <canvas id="chart" width="1000" height="300"></canvas>
+  <div id="logArea"></div>
+  <img id="tombstone" src="tombstone.png" />
+
+  <script>
+    let hp = 0, maxHP = 0, index = 0, data = [], labels = [], fullData = [], fullLabels = [];
+    let chart = null, timer = null, healTimes = new Set(), lastHealTime = -999;
+    const interval = 0.5, hitCD = 2.0, healCD = 1.5;
+    const hpBar = document.getElementById("hpBar");
+    const cdBar = document.getElementById("cdBar");
+    const hpText = document.getElementById("hpValueText");
+    const cdText = document.getElementById("cooldownText");
+    const logArea = document.getElementById("logArea");
+    const tombstone = document.getElementById("tombstone");
+
+    function simulate() {
+      clearInterval(timer);
+      fullData = [];
+      fullLabels = [];
+      healTimes.clear();
+      maxHP = Number(document.getElementById("maxHP").value);
+      const dmg = Number(document.getElementById("monsterDamage").value);
+      const heal = Number(document.getElementById("healAmount").value);
+      hp = maxHP;
+      let t = 0, nextHit = 0;
+      logArea.textContent = "";
+      lastHealTime = -999;
+
+      while (t <= 30) {
+        fullLabels.push(t.toFixed(1));
+
+        if (t >= nextHit) {
+          hp -= dmg;
+          nextHit = t + hitCD;
+          logArea.innerHTML += `<span class="log-attack">[${t.toFixed(1)}s] 受到攻擊 -${dmg}HP</span><br>`;
+        }
+
+        const threshold = (maxHP - heal > dmg) ? (maxHP - heal) : dmg;
+        if (hp <= threshold && (t - lastHealTime >= healCD)) {
+          hp += heal;
+          if (hp > maxHP) hp = maxHP;
+          lastHealTime = t;
+          healTimes.add(t.toFixed(1));
+          logArea.innerHTML += `<span class="log-heal">[${t.toFixed(1)}s] 使用補品 +${heal}HP</span><br>`;
+        }
+
+        if (hp <= 0) {
+          hp = 0;
+          fullData.push(hp);
+          break;
+        }
+
+        fullData.push(hp);
+        t += interval;
+      }
+
+      data = [];
+      labels = [];
+      drawChart();
+      updateBars(maxHP, 0);
+      tombstone.classList.remove("fall");
+    }
+
+    function drawChart() {
+      const ctx = document.getElementById("chart").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "HP",
+            data: data,
+            borderColor: "#f44336",
+            backgroundColor: "rgba(244,67,54,0.1)",
+            stepped: true,
+            borderWidth: 3,
+            pointRadius: 1
+          }]
+        },
+        options: {
+          animation: false,
+          responsive: true,
+          scales: {
+            x: { title: { display: true, text: "時間（秒）" } },
+            y: { beginAtZero: true, max: maxHP + 50 }
+          }
+        }
+      });
+    }
+
+    function updateBars(currentHP, cdLeft) {
+      hpBar.style.width = `${(currentHP / maxHP) * 100}%`;
+      cdBar.style.width = `${(1.5 - cdLeft) / 1.5 * 100}%`;
+      hpText.textContent = `當前HP: ${currentHP}`;
+      if (cdLeft < 1.5) {
+        cdText.textContent = `補品冷卻倒數：${(1.5 - cdLeft).toFixed(1)}s`;
+      } else {
+        cdText.textContent = `補品冷卻倒數：1.5s`;
+      }
+    }
+
+    function play() {
+      clearInterval(timer);
+      index = 0;
+      let localHealCD = 999;
+      data = [];
+      labels = [];
+      timer = setInterval(() => {
+        if (index >= fullData.length) {
+          clearInterval(timer);
+          showTombstone();
+          return;
+        }
+
+        const hpNow = fullData[index];
+        const tNow = parseFloat(fullLabels[index]);
+
+        labels.push(tNow.toFixed(1));
+        data.push(hpNow);
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.update('none');
+
+        if (healTimes.has(tNow.toFixed(1))) {
+          localHealCD = 0;
+        }
+
+        updateBars(hpNow, localHealCD);
+        localHealCD += interval;
+        index += 1;
+      }, 500); // 0.5s
+    }
+
+    function reset() {
+      clearInterval(timer);
+      tombstone.classList.remove("fall");
+      simulate();
+    }
+
+    function showTombstone() {
+      tombstone.classList.add("fall");
+    }
+
+    function toggleMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+  </script>
+</body>
+</html>
