@@ -7,28 +7,24 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       font-weight: bold;
       background: #e0f7fa;
       padding: 20px;
       transition: background 0.3s, color 0.3s;
     }
-
     .dark-mode {
       background: #1e1e1e;
       color: #eee;
     }
-
     .input-group {
       margin-bottom: 20px;
     }
-
     .input-group label {
       font-size: 20px;
       display: block;
       margin-bottom: 4px;
     }
-
     .input-group input {
       font-size: 22px;
       font-weight: bold;
@@ -36,11 +32,9 @@
       width: 200px;
       border-radius: 8px;
     }
-
     #maxHP { color: red; }
     #monsterDamage { color: #b266ff; }
     #healAmount { color: green; }
-
     button {
       padding: 10px 16px;
       font-size: 18px;
@@ -53,14 +47,11 @@
       color: white;
       user-select: none;
     }
-
     button:hover { opacity: 0.9; }
     #toggleMode { background: #555; color: #fff; }
     #pauseBtn { background: #f57c00; color: white; }
-
     #hpValueText { font-size: 22px; color: red; margin-top: 10px; }
     #cooldownText { font-size: 20px; color: green; }
-
     #hpBarContainer {
       background: #ccc;
       border-radius: 10px;
@@ -69,7 +60,6 @@
       height: 30px;
       box-shadow: inset 0 0 6px #888;
     }
-
     #hpBar {
       background: #f44336;
       height: 100%;
@@ -77,7 +67,6 @@
       border-radius: 10px;
       transition: width 0.3s;
     }
-
     #cdBar {
       position: absolute;
       bottom: 0;
@@ -88,7 +77,6 @@
       border-radius: 0 0 10px 10px;
       transition: width 0.1s linear;
     }
-
     #logArea {
       background: #fff;
       padding: 10px;
@@ -97,11 +85,12 @@
       border-radius: 10px;
       height: 160px;
       overflow-y: scroll;
+      white-space: pre-wrap;
     }
-
+    .log-attack::before { content: "\1F4A5  "; }
+    .log-heal::before { content: "\1F9EA  "; }
     .log-attack { color: #b266ff; }
     .log-heal { color: green; }
-
     #tombstone {
       position: absolute;
       width: 80px;
@@ -112,259 +101,273 @@
       opacity: 0;
       pointer-events: none;
     }
-
     .fall {
       top: 120px;
       right: 50%;
       transform: translateX(50%) rotate(10deg);
       opacity: 1;
     }
+    .chartjs-tooltip {
+      font-size: 20px !important;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <h1>補品生存模擬器</h1>
-
   <div class="input-group"><label>最大血量：</label><input id="maxHP" type="number" value="1000" /></div>
   <div class="input-group"><label>怪物最大傷害：</label><input id="monsterDamage" type="number" value="500" /></div>
   <div class="input-group"><label>補品回復量：</label><input id="healAmount" type="number" value="300" /></div>
-
-  <button onclick="simulate()">開始模擬</button>
-  <button onclick="play()" id="playBtn">播放動畫</button>
-  <button onclick="pause()" id="pauseBtn" disabled>暫停動畫</button>
-  <button onclick="reset()">重播</button>
-  <button id="toggleMode" onclick="toggleMode()">切換夜/日模式</button>
-
+  <button id="simulateBtn">開始模擬</button>
+  <button id="playBtn">播放動畫</button>
+  <button id="pauseBtn" disabled>暫停動畫</button>
+  <button id="resetBtn">重播</button>
+  <button id="toggleMode">切換夜/日模式</button>
   <div id="hpValueText">當前HP: --</div>
   <div id="cooldownText">補品冷卻倒數：--</div>
-
   <div id="hpBarContainer">
     <div id="hpBar"></div>
     <div id="cdBar"></div>
   </div>
-
   <canvas id="chart" width="1000" height="300"></canvas>
   <div id="logArea"></div>
-  <img id="tombstone" src="tombstone.png" alt="墓碑" />
-
+  <img id="tombstone" src="https://i.imgur.com/UV0fr9q.png" alt="墓碑" />
   <script>
-    let hp = 0, maxHP = 0, index = 0;
-    let data = [], labels = [], fullData = [], fullLabels = [];
-    let chart = null, timer = null, healTimes = new Set(), lastHealTime = -999;
-    const interval = 0.5, hitCD = 2.0, healCD = 1.5;
-    const hpBar = document.getElementById("hpBar");
-    const cdBar = document.getElementById("cdBar");
-    const hpText = document.getElementById("hpValueText");
-    const cdText = document.getElementById("cooldownText");
-    const logArea = document.getElementById("logArea");
-    const tombstone = document.getElementById("tombstone");
-    const playBtn = document.getElementById("playBtn");
-    const pauseBtn = document.getElementById("pauseBtn");
+    window.onload = function() {
+      const maxHPInput = document.getElementById("maxHP");
+      const monsterDamageInput = document.getElementById("monsterDamage");
+      const healAmountInput = document.getElementById("healAmount");
+      const simulateBtn = document.getElementById("simulateBtn");
+      const playBtn = document.getElementById("playBtn");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const toggleModeBtn = document.getElementById("toggleMode");
+      const hpText = document.getElementById("hpValueText");
+      const cdText = document.getElementById("cooldownText");
+      const hpBar = document.getElementById("hpBar");
+      const cdBar = document.getElementById("cdBar");
+      const logArea = document.getElementById("logArea");
+      const tombstone = document.getElementById("tombstone");
+      const chartCanvas = document.getElementById("chart");
+      
+      let maxHP, hp, healAmount, monsterDamage;
+      let interval = 0.5;
+      let hitCD = 2.0;
+      let healCD = 1.5;
+      let fullData = [];
+      let fullLabels = [];
+      let healTimes = new Set();
+      let lastHealTime = -999;
+      let index = 0;
+      let timer = null;
+      let isPaused = false;
+      let cdLeft = 0;
+      let chart = null;
 
-    let isPaused = false;
-
-    function simulate() {
-      clearInterval(timer);
-      fullData = [];
-      fullLabels = [];
-      healTimes.clear();
-      maxHP = Number(document.getElementById("maxHP").value);
-      const dmg = Number(document.getElementById("monsterDamage").value);
-      const heal = Number(document.getElementById("healAmount").value);
-      hp = maxHP;
-      let t = 0, nextHit = 0;
-      logArea.textContent = "";
-      lastHealTime = -999;
-      tombstone.classList.remove("fall");
-      isPaused = false;
-      pauseBtn.disabled = true;
-      playBtn.disabled = false;
-
-      while (t <= 30) {
-        fullLabels.push(t.toFixed(1));
-        if (t >= nextHit) {
-          hp -= dmg;
-          nextHit = t + hitCD;
-          logArea.innerHTML += `<span class="log-attack">[${t.toFixed(1)}s] 受到攻擊 -${dmg}HP</span><br>`;
-        }
-
-        const threshold = (maxHP - heal > dmg) ? (maxHP - heal) : dmg;
-        if (hp <= threshold && (t - lastHealTime >= healCD)) {
-          hp += heal;
-          if (hp > maxHP) hp = maxHP;
-          lastHealTime = t;
-          healTimes.add(t.toFixed(1));
-          logArea.innerHTML += `<span class="log-heal">[${t.toFixed(1)}s] 使用補品 +${heal}HP</span><br>`;
-        }
-
-        if (hp <= 0) {
-          hp = 0;
-          fullData.push(hp);
-          console.log("玩家已死亡，觸發墓碑動畫");
-          break;
-        }
-
-        fullData.push(hp);
-        t += interval;
-      }
-
-      data = [];
-      labels = [];
-      drawChart();
-      updateBars(maxHP, 0);
-    }
-
-    function drawChart() {
-      const ctx = document.getElementById("chart").getContext("2d");
-      if (chart) chart.destroy();
-
-      chart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: labels,
-          datasets: [{
-            label: "HP",
-            data: data,
-            borderColor: "#f44336",
-            backgroundColor: "rgba(244,67,54,0.1)",
-            stepped: true,
-            borderWidth: 3,
-            pointRadius: 6,
-            pointHoverRadius: 8
-          }]
-        },
-        options: {
-          animation: false,
-          responsive: true,
-          plugins: {
-            tooltip: {
-              titleFont: { size: 18 },
-              bodyFont: { size: 18 },
-              callbacks: {
-                title: (context) => context[0].label,
-                label: function(context) {
-                  const t = context.label;
-                  const v = context.raw;
-                  const i = context.dataIndex;
-                  const prev = data[i - 1] || v;
-                  const delta = v - prev;
-                  if (delta >= 0) return null; // 無受傷不顯示
-                  return `🩸 [${t}s] 受到攻擊 ${-delta} HP`;
-                },
-                afterLabel: function(context) {
-                  const t = context.label;
-                  const v = context.raw;
-                  const i = context.dataIndex;
-                  const prev = data[i - 1] || v;
-                  const delta = v - prev;
-                  const usedHeal = healTimes.has(t);
-                  const tookDamage = delta < 0;
-
-                  if (!usedHeal && !tookDamage) return null;
-
-                  if (usedHeal) {
-                    // 補血顯示
-                    let healDelta = delta > 0 ? delta : 0;
-                    return `🧪 [${t}s] 使用補品 +${healDelta} HP`;
+      function drawChart(labels, data) {
+        if (chart) chart.destroy();
+        chart = new Chart(chartCanvas.getContext("2d"), {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "HP",
+              data: data,
+              borderColor: "#f44336",
+              backgroundColor: "rgba(244,67,54,0.1)",
+              stepped: true,
+              borderWidth: 3,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              spanGaps: true,
+            }]
+          },
+          options: {
+            animation: false,
+            responsive: true,
+            plugins: {
+              tooltip: {
+                enabled: true,
+                usePointStyle: true,
+                callbacks: {
+                  title: ctx => ctx[0].label + " 秒",
+                  label: context => {
+                    const i = context.dataIndex;
+                    const t = context.label;
+                    const val = context.raw;
+                    const prevVal = i > 0 ? context.chart.data.datasets[0].data[i - 1] : val;
+                    const delta = val - prevVal;
+                    let lines = [];
+                    if (delta < 0) {
+                      lines.push(`🩸 [${t}s] 受到攻擊 ${-delta}HP`);
+                    }
+                    if (healTimes.has(t)) {
+                      let healAmount = delta > 0 ? delta : 0;
+                      lines.push(`🧪 [${t}s] 使用補品 +${healAmount}HP`);
+                    }
+                    if(lines.length === 0) {
+                      lines.push(`HP: ${val}`);
+                    }
+                    return lines;
                   }
-                  return null;
-                }
+                },
+                bodyFont: { size: 18, weight: 'bold' },
+                titleFont: { size: 20, weight: 'bold' },
+                displayColors: false,
+                padding: 10,
+                cornerRadius: 8
+              },
+              datalabels: {
+                color: '#000',
+                font: { weight: 'bold' },
+                align: 'top',
+                display: function(ctx) {
+                  return ctx.dataIndex === 0 || ctx.dataset.data[ctx.dataIndex] !== ctx.dataset.data[ctx.dataIndex - 1];
+                },
+                formatter: val => val
               }
             },
-            datalabels: {
-              color: '#000',
-              font: { weight: 'bold' },
-              align: 'top',
-              display: function(context) {
-                const i = context.dataIndex;
-                const d = context.chart.data.datasets[0].data;
-                return i === 0 || d[i] !== d[i - 1];
-              },
-              formatter: function(value) {
-                return value;
-              }
+            scales: {
+              x: { title: { display: true, text: "時間（秒）" }, ticks: { maxRotation: 0, minRotation: 0 } },
+              y: { beginAtZero: true, max: maxHP + 50 }
             }
           },
-          scales: {
-            x: { title: { display: true, text: "時間（秒）" } },
-            y: { beginAtZero: true, max: maxHP + 50 }
+          plugins: [ChartDataLabels]
+        });
+      }
+
+      function updateBars(currentHP, cdLeft) {
+        hpBar.style.width = `${(currentHP / maxHP) * 100}%`;
+        cdBar.style.width = `${((healCD - cdLeft) / healCD) * 100}%`;
+        hpText.textContent = `當前HP: ${currentHP}`;
+        cdText.textContent = `補品冷卻倒數：${Math.max(0, (healCD - cdLeft)).toFixed(1)}s`;
+      }
+
+      function simulate() {
+        clearInterval(timer);
+        fullData = [];
+        fullLabels = [];
+        healTimes.clear();
+        maxHP = Number(maxHPInput.value);
+        monsterDamage = Number(monsterDamageInput.value);
+        healAmount = Number(healAmountInput.value);
+        hp = maxHP;
+        let t = 0;
+        let nextHit = 0;
+        logArea.textContent = "";
+        lastHealTime = -999;
+        tombstone.classList.remove("fall");
+        isPaused = false;
+        pauseBtn.disabled = true;
+        playBtn.disabled = false;
+        cdLeft = 0;
+
+        while (t <= 30) {
+          fullLabels.push(t.toFixed(1));
+          if (t >= nextHit) {
+            hp -= monsterDamage;
+            nextHit = t + hitCD;
+            logArea.innerHTML += `<span class="log-attack">[${t.toFixed(1)}s] 受到攻擊 -${monsterDamage}HP</span>\n`;
           }
-        },
-        plugins: [ChartDataLabels]
-      });
-    }
-
-    function updateBars(currentHP, cdLeft) {
-      hpBar.style.width = `${(currentHP / maxHP) * 100}%`;
-      cdBar.style.width = `${((1.5 - cdLeft) / 1.5) * 100}%`;
-      hpText.textContent = `當前HP: ${currentHP}`;
-      cdText.textContent = `補品冷卻倒數：${Math.max(0, (1.5 - cdLeft)).toFixed(1)}s`;
-    }
-
-    function play() {
-      if (timer) return; // 防重複播放
-      if (index >= fullData.length) index = 0;
-      isPaused = false;
-      pauseBtn.disabled = false;
-      playBtn.disabled = true;
-      timer = setInterval(() => {
-        if (index >= fullData.length) {
-          clearInterval(timer);
-          timer = null;
-          showTombstone();
-          pauseBtn.disabled = true;
-          playBtn.disabled = false;
-          return;
+          const threshold = (maxHP - healAmount > monsterDamage) ? (maxHP - healAmount) : monsterDamage;
+          if (hp <= threshold && (t - lastHealTime >= healCD)) {
+            hp += healAmount;
+            if (hp > maxHP) hp = maxHP;
+            lastHealTime = t;
+            healTimes.add(t.toFixed(1));
+            logArea.innerHTML += `<span class="log-heal">[${t.toFixed(1)}s] 使用補品 +${healAmount}HP</span>\n`;
+          }
+          if (hp <= 0) {
+            hp = 0;
+            fullData.push(hp);
+            break;
+          }
+          fullData.push(hp);
+          t += interval;
         }
+        index = 0;
+        // 預設labels全出，資料先全null只顯示空軸
+        drawChart(fullLabels, new Array(fullLabels.length).fill(null));
+        updateBars(maxHP, 0);
+      }
 
-        if (isPaused) return;
+      function play() {
+        if (timer) return;
+        if (index >= fullData.length) index = 0;
+        isPaused = false;
+        pauseBtn.disabled = false;
+        playBtn.disabled = true;
+        cdLeft = 0;
 
-        const hpNow = fullData[index];
-        const tNow = parseFloat(fullLabels[index]);
+        timer = setInterval(() => {
+          if (index >= fullData.length) {
+            clearInterval(timer);
+            timer = null;
+            showTombstone();
+            pauseBtn.disabled = true;
+            playBtn.disabled = false;
+            return;
+          }
+          if (isPaused) return;
 
-        labels.push(tNow.toFixed(1));
-        data.push(hpNow);
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = data;
-        chart.update('none');
+          const hpNow = fullData[index];
+          const tNow = parseFloat(fullLabels[index]);
 
-        if (healTimes.has(tNow.toFixed(1))) {
-          cdLeft = 0;
-        } else {
-          cdLeft += interval;
-        }
+          // 建立一份完整長度資料陣列，index以前的是真值，後面是null，維持完整時間軸
+          let displayData = new Array(fullLabels.length).fill(null);
+          for(let i=0; i<=index; i++) {
+            displayData[i] = fullData[i];
+          }
+          chart.data.datasets[0].data = displayData;
+          chart.update('none');
 
-        updateBars(hpNow, cdLeft);
-        index++;
-      }, 500);
+          if (healTimes.has(tNow.toFixed(1))) {
+            cdLeft = 0;
+          } else {
+            cdLeft += interval;
+          }
 
-      var cdLeft = 1.5;
-    }
+          updateBars(hpNow, cdLeft);
 
-    function pause() {
-      if (!timer) return;
-      isPaused = true;
-      pauseBtn.disabled = true;
-      playBtn.disabled = false;
-    }
+          index++;
+        }, 500);
+      }
 
-    function reset() {
-      clearInterval(timer);
-      timer = null;
-      isPaused = false;
-      pauseBtn.disabled = true;
-      playBtn.disabled = false;
-      tombstone.classList.remove("fall");
+      function pause() {
+        if (!timer) return;
+        isPaused = true;
+        pauseBtn.disabled = true;
+        playBtn.disabled = false;
+      }
+
+      function reset() {
+        clearInterval(timer);
+        timer = null;
+        isPaused = false;
+        pauseBtn.disabled = true;
+        playBtn.disabled = false;
+        tombstone.classList.remove("fall");
+        simulate();
+      }
+
+      function showTombstone() {
+        tombstone.classList.add("fall");
+      }
+
+      function toggleMode() {
+        document.body.classList.toggle("dark-mode");
+      }
+
+      // 綁定按鈕事件
+      simulateBtn.onclick = simulate;
+      playBtn.onclick = play;
+      pauseBtn.onclick = pause;
+      resetBtn.onclick = reset;
+      toggleModeBtn.onclick = toggleMode;
+
+      // 預設先做一次模擬，畫出空軸
       simulate();
-    }
-
-    function showTombstone() {
-      tombstone.classList.add("fall");
-      console.log("墓碑動畫觸發");
-    }
-
-    function toggleMode() {
-      document.body.classList.toggle("dark-mode");
-    }
+    };
   </script>
 </body>
 </html>
