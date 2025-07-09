@@ -6,367 +6,911 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
+    /* === 整體設定 === */
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: "Segoe UI", sans-serif;
       font-weight: bold;
       background: #e0f7fa;
       padding: 20px;
-      transition: background 0.3s, color 0.3s;
+      font-size: 24px;
     }
-    .dark-mode {
-      background: #1e1e1e;
-      color: #eee;
+    h1 {
+      font-size: 36px;
+      color: black;
+      margin-bottom: 16px;
+      text-align: center;
     }
-    .input-group {
-      margin-bottom: 20px;
+    .section {
+      width: max-content;
+      margin: auto;
+      margin-bottom: 10px;
     }
-    .input-group label {
+
+    /* === 所有格子 === */
+    input,
+    select {
       font-size: 20px;
-      display: block;
-      margin-bottom: 4px;
-    }
-    .input-group input {
-      font-size: 22px;
       font-weight: bold;
-      padding: 10px;
-      width: 200px;
-      border-radius: 8px;
+      padding: 6px;
+      border-radius: 5px;
+      border: 3px solid black;
+      box-sizing: border-box;
+      text-align: center;
+      width: 100px;
+      max-width: 100px;
     }
-    #maxHP { color: red; }
-    #monsterDamage { color: #b266ff; }
-    #healAmount { color: green; }
-    button {
-      padding: 10px 16px;
+
+    /* Readonly 自動輸出欄位 */
+    input[readonly] {
+      background: #f0f0f0;
+      border: 3px dashed #383535;
+      font-weight: bold;
+    }
+
+    /* === 表單群組排版（橫向） === */
+    .input-group {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+      gap: 3px;
+      margin-bottom: 15px;
+    }
+
+    /* Label 標題 對齊與寬度 */
+    .input-group label,
+    .label-cell {
+      font-size: 20px;
+      color: black;
+      white-space: nowrap;
+    }
+    .label-cell {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 180px;
+      max-width: 180px;
+      gap: 3px;
+    }
+
+    .input-group.skill .label-cell {
+      min-width: 100px !important;
+      max-width: 120px !important;
+      justify-content: flex-start !important;
+      padding-left: 4px !important;
+      color: #0288d1 !important;
+    }
+
+    /* 長 label（如：MP減免欄） */
+    .label-cell.long-label {
+      min-width: 140px;
+      max-width: 140px;
+    }
+
+    /* 右側 input 欄位 */
+    .input-cell {
+      min-width: 100px;
+      max-width: 100px;
+      text-align: center;
+    }
+
+    /* === 專屬顏色設定 === */
+    #maxHP, #hpDamage, #hpHealAmount, #finalHP, #actualHPDamage, #effectiveHealRatioHP {
+      color: red;
+    }
+    #maxMP, #finalMP, #mpDamage, #actualMPDamage, #mpExpectedUsage, #effectiveHealRatioMP, #mpHealAmount {
+      color: #007bff;
+    }
+    #mpReductionRate, #magicGuardLevel {
+      color: #0288d1;
+    }
+    #monsterDamage, #finalMonsterDamage, #magicResistance, #forceReduce {
+      color: #b266ff;
+    }
+
+    /* === 建議欄位樣式 === */
+    #hpSuggest {
+      background: #f0f0f0;
+      border: 3px dashed #999999;
+      color: red;
+      font-weight: bold;
+      max-width: 100px;
+      width: auto;
+      text-align: center;
+    }
+    .label-cell.suggestion {
+      max-width: 80px;
+      min-width: 50px;
+      margin-left: 30px;
+      text-align: center;
+    }
+
+    /* === 滑條樣式 === */
+    .range-container-wrapper {
+      width: 140px;
+      display: flex;
+      justify-content: center;
+    }
+    .range-container {
+      position: relative;
+      width: 140px;
+      height: 35px;
+      border-radius: 10px;
+      background: white;
+      border: 3px solid black;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .range-bar-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 50%;
+      background-color: red;
+      border-radius: 8px;
+      z-index: 1;
+    }
+    .range-container.blue .range-bar-bg {
+      background-color: #007bff;
+    }
+    .range-thumb {
+      position: absolute;
+      top: 2px;
+      left: calc(50% - 7px);
+      width: 14px;
+      height: 30px;
+      background: black;
+      border-radius: 7px;
+      z-index: 3;
+    }
+    .range-value {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       font-size: 18px;
       font-weight: bold;
-      margin: 5px;
-      border-radius: 8px;
-      border: none;
+      color: black;
+      z-index: 4;
+      pointer-events: none;
+    }
+    .range-container input[type="range"] {
+      display: none;
+    }
+
+    /* 滑條容器寬度微調 */
+    #hpRangeWrapper, #mpRangeWrapper {
+      width: 120px;
+    }
+
+    /* === Checkbox 客製樣式 === */
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      font-size: 20px;
+      margin: 0 10px;
+      gap: 4px;
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      margin: 0;
+      padding: 0;
+      appearance: none;
+      border: 3px solid black;
+      border-radius: 6px;
+      background-color: white;
       cursor: pointer;
-      background: linear-gradient(135deg, #0288d1, #03a9f4);
-      color: white;
-      user-select: none;
-    }
-    button:hover { opacity: 0.9; }
-    #toggleMode { background: #555; color: #fff; }
-    #pauseBtn { background: #f57c00; color: white; }
-    #hpValueText { font-size: 22px; color: red; margin-top: 10px; }
-    #cooldownText { font-size: 20px; color: green; }
-    #hpBarContainer {
-      background: #ccc;
-      border-radius: 10px;
-      margin-top: 20px;
       position: relative;
-      height: 30px;
-      box-shadow: inset 0 0 6px #888;
     }
-    #hpBar {
-      background: #f44336;
-      height: 100%;
-      width: 100%;
-      border-radius: 10px;
-      transition: width 0.3s;
-    }
-    #cdBar {
+    .checkbox-label input[type="checkbox"]:checked::after {
+      content: "";
       position: absolute;
-      bottom: 0;
-      left: 0;
-      height: 12px;
-      background: #4caf50;
-      width: 0%;
-      border-radius: 0 0 10px 10px;
-      transition: width 0.1s linear;
+      left: 4.5px;
+      top: 0px;
+      width: 7px;
+      height: 14px;
+      border: solid black;
+      border-width: 0 3px 3px 0;
+      transform: rotate(45deg);
+    }
+
+    #statusContainer {
+      width: 1000px;
+      margin: 0 auto 10px auto;
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      font-size: 18px;
+      color: #333;
+    }
+
+    /* === 圖表與紀錄 === */
+    #chartContainer {
+      position: relative;
+      max-width: 2200px;
+      width: 100%;
+      height: 500px;
+      margin: 0 auto;
+      overflow-x: auto;
+    }
+    #chart {
+      width: 100% !important;
+      height: 100% !important;
     }
     #logArea {
       background: #fff;
-      padding: 10px;
+      padding: 5px;
       font-family: monospace;
-      margin-top: 20px;
-      border-radius: 10px;
-      height: 160px;
-      overflow-y: scroll;
+      border-radius: 8px;
+      margin: 10px auto; /* ← 加這行可置中 */
+      margin-top: 10px;
+      height: 300px;
+      width: 1000px;
+      overflow-y: auto;
       white-space: pre-wrap;
+      font-size: 16px;
+      border: 1px solid #ccc;
+
     }
-    .log-attack::before { content: "\1F4A5  "; }
-    .log-heal::before { content: "\1F9EA  "; }
     .log-attack { color: #b266ff; }
     .log-heal { color: green; }
+    .log-death { color: #555; }
+
+    /* === HP / 補品動畫條 === */
+    #hpBar, #cooldownBar {
+      width: 500px;
+      height: 18px;
+      background: #ccc;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 5px auto;
+    }
+    #hpFill, #cooldownFill {
+      height: 24px;          /* 高度調大 */
+      width: 0%;             /* 寬度隨狀態變動 */
+      background-color: red; /* hpFill例 */
+      transition: width 0.3s ease;
+      border-radius: 6px;
+    }
+
+    #hpFill {
+      height: 100%;
+      background: red;
+      transition: width 0.3s;
+    }
+    #cooldownFill {
+      height: 16px;
+      background: green;
+      transition: width 0.3s;
+    }
+
+    /* === 墓碑動畫 === */
     #tombstone {
-      position: absolute;
       width: 80px;
-      height: auto;
-      right: -100px;
-      top: -150px;
-      transition: transform 1s ease-in, top 1s ease-in;
-      opacity: 0;
-      pointer-events: none;
+      position: absolute;
+      top: 0px; /* 加上這行 */
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      z-index: 999;
+      transition: top 2s ease-in;
     }
-    .fall {
-      top: 120px;
-      right: 50%;
-      transform: translateX(50%) rotate(10deg);
-      opacity: 1;
-    }
-    .chartjs-tooltip {
-      font-size: 20px !important;
+
+    /* === 按鈕樣式 === */
+    button {
+      padding: 10px 18px;
+      font-size: 18px;
+      border-radius: 6px;
       font-weight: bold;
+      background: #0288d1;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    button:hover {
+      background: #0277bd;
+    }
+
+    button#pauseBtn {
+      background-color: #4caf50; /* 綠色 */
+    }
+    button#pauseBtn:hover {
+      background-color: #388e3c;
+    }
+
+    button#resetBtn {
+      background-color: #ffcc80; /* 淡橘色 */
+      color: black;
+    }
+    button#resetBtn:hover {
+      background-color: #ffb74d;
+    }
+
+    /* === 禁用數字欄上下箭頭（美觀用） === */
+    /* Chrome/Safari */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    /* Firefox */
+    input[type="number"] {
+      -moz-appearance: textfield;
     }
   </style>
 </head>
 <body>
   <h1>補品生存模擬器</h1>
-  <div class="input-group"><label>最大血量：</label><input id="maxHP" type="number" value="1000" /></div>
-  <div class="input-group"><label>怪物最大傷害：</label><input id="monsterDamage" type="number" value="500" /></div>
-  <div class="input-group"><label>補品回復量：</label><input id="healAmount" type="number" value="300" /></div>
-  <button id="simulateBtn">開始模擬</button>
-  <button id="playBtn">播放動畫</button>
-  <button id="pauseBtn" disabled>暫停動畫</button>
-  <button id="resetBtn">重播</button>
-  <button id="toggleMode">切換夜/日模式</button>
-  <div id="hpValueText">當前HP: --</div>
-  <div id="cooldownText">補品冷卻倒數：--</div>
-  <div id="hpBarContainer">
-    <div id="hpBar"></div>
-    <div id="cdBar"></div>
+  <div class="section" id="app">
+    <!-- 技能區 -->
+    <div class="input-group skill">
+      <label class="checkbox-label">
+        <input type="checkbox" id="sacredFire" />
+        <img src="https://maple.yampiz.com/maple/custom/skill/sk_02067.png" class="icon" />聖火
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="magicGuard" />
+        <img src="https://maple.yampiz.com/maple/custom/skill/sk_01009.png" class="icon" />魔心防禦
+      </label>
+      <label class="label-cell" style="color: #0288d1;">魔心防禦等級</label>
+      <select id="magicGuardLevel" style="width: auto; font-weight: bold;">
+        <!-- LV1 ~ LV20 -->
+        <option>LV1</option><option>LV2</option><option>LV3</option><option>LV4</option>
+        <option>LV5</option><option>LV6</option><option>LV7</option><option>LV8</option>
+        <option>LV9</option><option>LV10</option><option>LV11</option><option>LV12</option>
+        <option>LV13</option><option>LV14</option><option>LV15</option><option>LV16</option>
+        <option>LV17</option><option>LV18</option><option>LV19</option><option>LV20</option>
+      </select>
+      <label class="label-cell" style="color: #0288d1;">MP替代率</label>
+      <input id="mpReductionRate" readonly style="width: 70px; font-weight: bold; color: #0288d1" />
+    </div>
+
+    <!-- 魔法抵抗與力量消除 -->
+    <div class="input-group">
+      <label class="label-cell">
+        <img src="https://maple.yampiz.com/maple/custom/skill/sk_03012.png" class="icon" />
+        魔法抵抗減免%
+      </label>
+      <input id="magicResistance" type="number" value="0" />
+      <label class="label-cell">
+        <img src="https://maple.yampiz.com/maple/custom/skill/sk_03080.png" class="icon" />
+        力量消除減免%
+      </label>
+      <input id="forceReduce" type="number" value="0" />
+    </div>
+
+    <!-- 最大HP / 最終HP -->
+    <div class="input-group">
+      <label class="label-cell">最大HP</label>
+      <input id="maxHP" type="number" value="4500" />
+      <label class="label-cell">最終HP</label>
+      <input id="finalHP" readonly />
+    </div>
+
+    <!-- 最大MP / 最終MP -->
+    <div class="input-group">
+      <label class="label-cell">最大MP</label>
+      <input id="maxMP" type="number" value="5000" />
+      <label class="label-cell">最終MP</label>
+      <input id="finalMP" readonly />
+    </div>
+
+    <!-- 怪物傷害 -->
+    <div class="input-group">
+      <label class="label-cell">怪物最大傷害</label>
+      <input id="monsterDamage" type="number" value="1900" />
+      <label class="label-cell">怪物減免後傷害</label>
+      <input id="finalMonsterDamage" readonly />
+    </div>
+
+    <!-- 預估損耗 -->
+    <div class="input-group">
+      <label class="label-cell">HP預估損耗</label>
+      <input id="hpDamage" readonly />
+      <label class="label-cell">MP預估損耗</label>
+      <input id="mpDamage" readonly />
+    </div>
+
+    <!-- 實際損耗 -->
+    <div class="input-group">
+      <label class="label-cell">HP實際損耗</label>
+      <input id="actualHPDamage" readonly />
+      <label class="label-cell">MP實際損耗</label>
+      <input id="actualMPDamage" readonly />
+    </div>
+
+    <!-- 無敵時間 MP 預估使用 -->
+    <div class="input-group" style="justify-content: center;">
+      <label class="label-cell long-label">單次無敵時間內MP預估使用量</label>
+      <input id="mpExpectedUsage" type="number" value="0" />
+    </div>
+
+    <!-- HP補品 -->
+    <div class="input-group hp">
+      <!-- 1. HP補品回復量標籤 -->
+      <div class="label-cell">
+        <img src="https://maple.yampiz.com/maple/custom/item/potion/po_in001.png" class="icon" />
+        HP補品回復量
+      </div>
+
+      <!-- 2. HP補品回復量輸入框 -->
+      <input id="hpHealAmount" type="number" value="1000" />
+
+      <!-- 3. 寵補HP設定% 標籤 -->
+      <div class="label-cell">寵補HP設定%</div>
+
+      <!-- 4. 寵補HP設定% 滑條 -->
+      <div class="input-cell">
+        <div class="range-container" id="hpRangeWrapper">
+          <div class="range-bar-bg" id="hpBarBg"></div>
+          <div class="range-thumb" id="hpThumb"></div>
+          <span class="range-value" id="hpSliderValue">50%</span>
+          <input type="range" id="hpPetSlider" min="0" max="100" value="50" />
+        </div>
+      </div>
+
+      <!-- 5. 建議欄 -->
+      <div class="label-cell suggestion">建議</div>
+      <input id="hpSuggest" readonly value="30%" />
+    </div>
+
+    <!-- MP補品 -->
+    <div class="input-group mp">
+      <!-- 第一列：圖示 + 回復量欄位 -->
+      <div class="label-cell">
+        <img src="https://maple.yampiz.com/maple/custom/item/potion/po_in004.png" class="icon" />
+        MP補品回復量
+      </div>
+      <input id="mpHealAmount" type="number" value="300" />
+
+      <!-- 第二列：寵補% 滑條 -->
+      <div class="label-cell">寵補MP設定%</div>
+      <div class="input-cell">
+        <div class="range-container blue" id="mpRangeWrapper">
+          <div class="range-bar-bg" id="mpBarBg"></div>
+          <div class="range-thumb" id="mpThumb"></div>
+          <span class="range-value" id="mpSliderValue">50%</span>
+          <input type="range" min="0" max="100" value="50" id="mpPetSlider" />
+        </div>
+      </div>
+    </div>
   </div>
-  <canvas id="chart" width="1000" height="300"></canvas>
-  <div id="logArea"></div>
-  <img id="tombstone" src="https://i.imgur.com/UV0fr9q.png" alt="墓碑" />
+
+  <div class="section">
+    <button onclick="simulate()">開始模擬</button>
+    <button onclick="play()">播放動畫</button>
+    <button id="pauseBtn" onclick="pause()">暫停</button>
+    <button id="resetBtn" onclick="reset()">重置</button>
+    <!-- 最後加入的hpStatus和cooldownStatus -->
+    <div style="margin-top: 10px;">
+      <span id="hpStatus"></span><br />
+      <span id="cooldownStatus"></span>
+    </div>
+    <!-- 補品血條 -->
+    <div id="hpBar"><div id="hpFill"></div></div>
+    <div id="cooldownBar"><div id="cooldownFill"></div></div>
+  </div>
+
+  <div id="chartContainer" class="section">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div id="logArea" class="section"></div>
+
+  <img id="tombstone" src="https://upload.wikimedia.org/wikipedia/commons/4/47/Gravestone_Icon.png" alt="墓碑" />
+
   <script>
-    window.onload = function() {
-      const maxHPInput = document.getElementById("maxHP");
-      const monsterDamageInput = document.getElementById("monsterDamage");
-      const healAmountInput = document.getElementById("healAmount");
-      const simulateBtn = document.getElementById("simulateBtn");
-      const playBtn = document.getElementById("playBtn");
-      const pauseBtn = document.getElementById("pauseBtn");
-      const resetBtn = document.getElementById("resetBtn");
-      const toggleModeBtn = document.getElementById("toggleMode");
-      const hpText = document.getElementById("hpValueText");
-      const cdText = document.getElementById("cooldownText");
-      const hpBar = document.getElementById("hpBar");
-      const cdBar = document.getElementById("cdBar");
-      const logArea = document.getElementById("logArea");
-      const tombstone = document.getElementById("tombstone");
-      const chartCanvas = document.getElementById("chart");
-      
-      let maxHP, hp, healAmount, monsterDamage;
-      let interval = 0.5;
-      let hitCD = 2.0;
-      let healCD = 1.5;
-      let fullData = [];
-      let fullLabels = [];
-      let healTimes = new Set();
-      let lastHealTime = -999;
-      let index = 0;
-      let timer = null;
-      let isPaused = false;
-      let cdLeft = 0;
-      let chart = null;
+    window.onload = function () {
+      // 把這四個變數變成 window 全域屬性
+      window.chart = null;
+      window.fullData = [];
+      window.animationTimer = null;
+      window.currentIndex = 0;
 
-      function drawChart(labels, data) {
-        if (chart) chart.destroy();
-        chart = new Chart(chartCanvas.getContext("2d"), {
-          type: "line",
-          data: {
-            labels: labels,
-            datasets: [{
-              label: "HP",
-              data: data,
-              borderColor: "#f44336",
-              backgroundColor: "rgba(244,67,54,0.1)",
-              stepped: true,
-              borderWidth: 3,
-              pointRadius: 6,
-              pointHoverRadius: 8,
-              spanGaps: true,
-            }]
-          },
-          options: {
-            animation: false,
-            responsive: true,
-            plugins: {
-              tooltip: {
-                enabled: true,
-                usePointStyle: true,
-                callbacks: {
-                  title: ctx => ctx[0].label + " 秒",
-                  label: context => {
-                    const i = context.dataIndex;
-                    const t = context.label;
-                    const val = context.raw;
-                    const prevVal = i > 0 ? context.chart.data.datasets[0].data[i - 1] : val;
-                    const delta = val - prevVal;
-                    let lines = [];
-                    if (delta < 0) {
-                      lines.push(`🩸 [${t}s] 受到攻擊 ${-delta}HP`);
-                    }
-                    if (healTimes.has(t)) {
-                      let healAmount = delta > 0 ? delta : 0;
-                      lines.push(`🧪 [${t}s] 使用補品 +${healAmount}HP`);
-                    }
-                    if(lines.length === 0) {
-                      lines.push(`HP: ${val}`);
-                    }
-                    return lines;
-                  }
-                },
-                bodyFont: { size: 18, weight: 'bold' },
-                titleFont: { size: 20, weight: 'bold' },
-                displayColors: false,
-                padding: 10,
-                cornerRadius: 8
-              },
-              datalabels: {
-                color: '#000',
-                font: { weight: 'bold' },
-                align: 'top',
-                display: function(ctx) {
-                  return ctx.dataIndex === 0 || ctx.dataset.data[ctx.dataIndex] !== ctx.dataset.data[ctx.dataIndex - 1];
-                },
-                formatter: val => val
-              }
-            },
-            scales: {
-              x: { title: { display: true, text: "時間（秒）" }, ticks: { maxRotation: 0, minRotation: 0 } },
-              y: { beginAtZero: true, max: maxHP + 50 }
-            }
-          },
-          plugins: [ChartDataLabels]
-        });
+      const hpSlider = document.getElementById('hpPetSlider');
+      const hpSliderValue = document.getElementById('hpSliderValue');
+      const hpBarBg = document.getElementById('hpBarBg');
+      const hpThumb = document.getElementById('hpThumb');
+      const hpRangeWrapper = document.getElementById('hpRangeWrapper');
+
+      let isDragging = false;
+
+      function updateHPBar(clientX) {
+        const rect = hpRangeWrapper.getBoundingClientRect();
+        const percent = Math.min(
+          Math.max(0, (clientX - rect.left) / rect.width),
+          1,
+        );
+        const value = Math.round(percent * 100);
+
+        hpSlider.value = value;
+        hpSliderValue.textContent = value + '%';
+        hpBarBg.style.width = value + '%';
+        hpThumb.style.left = `calc(${value}% - 6px)`;
       }
 
-      function updateBars(currentHP, cdLeft) {
-        hpBar.style.width = `${(currentHP / maxHP) * 100}%`;
-        cdBar.style.width = `${((healCD - cdLeft) / healCD) * 100}%`;
-        hpText.textContent = `當前HP: ${currentHP}`;
-        cdText.textContent = `補品冷卻倒數：${Math.max(0, (healCD - cdLeft)).toFixed(1)}s`;
+      hpRangeWrapper.addEventListener('mousedown', function (e) {
+        isDragging = true;
+        updateHPBar(e.clientX);
+      });
+
+      window.addEventListener('mousemove', function (e) {
+        if (isDragging) {
+          updateHPBar(e.clientX);
+        }
+      });
+
+      window.addEventListener('mouseup', function () {
+        isDragging = false;
+      });
+
+      const mpSlider = document.getElementById('mpPetSlider');
+      const mpSliderValue = document.getElementById('mpSliderValue');
+      const mpBarBg = document.getElementById('mpBarBg');
+      const mpThumb = document.getElementById('mpThumb');
+      const mpRangeWrapper = document.getElementById('mpRangeWrapper');
+
+      let isDraggingMP = false;
+
+      function updateMPBar(clientX) {
+        const rect = mpRangeWrapper.getBoundingClientRect();
+        const percent = Math.min(
+          Math.max(0, (clientX - rect.left) / rect.width),
+          1,
+        );
+        const value = Math.round(percent * 100);
+
+        mpSlider.value = value;
+        mpSliderValue.textContent = value + '%';
+        mpBarBg.style.width = value + '%';
+        mpThumb.style.left = `calc(${value}% - 7px)`;
       }
 
-      function simulate() {
-        clearInterval(timer);
-        fullData = [];
-        fullLabels = [];
-        healTimes.clear();
-        maxHP = Number(maxHPInput.value);
-        monsterDamage = Number(monsterDamageInput.value);
-        healAmount = Number(healAmountInput.value);
-        hp = maxHP;
-        let t = 0;
-        let nextHit = 0;
-        logArea.textContent = "";
-        lastHealTime = -999;
-        tombstone.classList.remove("fall");
-        isPaused = false;
-        pauseBtn.disabled = true;
-        playBtn.disabled = false;
-        cdLeft = 0;
+      mpRangeWrapper.addEventListener('mousedown', function (e) {
+        isDraggingMP = true;
+        updateMPBar(e.clientX);
+      });
 
-        while (t <= 30) {
-          fullLabels.push(t.toFixed(1));
-          if (t >= nextHit) {
-            hp -= monsterDamage;
-            nextHit = t + hitCD;
-            logArea.innerHTML += `<span class="log-attack">[${t.toFixed(1)}s] 受到攻擊 -${monsterDamage}HP</span>\n`;
+      window.addEventListener('mousemove', function (e) {
+        if (isDraggingMP) {
+          updateMPBar(e.clientX);
+        }
+      });
+
+      window.addEventListener('mouseup', function () {
+        isDraggingMP = false;
+      });
+
+      // ==== 以下是自動計算邏輯 ====
+      function updateAll() {
+        const sacredFire = document.getElementById('sacredFire').checked;
+        const magicGuard = document.getElementById('magicGuard').checked;
+        const magicGuardLevel =
+          parseInt(
+            document.getElementById('magicGuardLevel').value.replace('LV', ''),
+          ) || 1;
+        const maxHP = parseFloat(document.getElementById('maxHP').value) || 0;
+        const maxMP = parseFloat(document.getElementById('maxMP').value) || 0;
+        const monsterDamage =
+          parseFloat(document.getElementById('monsterDamage').value) || 0;
+        const magicResist =
+          parseFloat(document.getElementById('magicResistance').value) / 100 || 0;
+        const forceReduce =
+          parseFloat(document.getElementById('forceReduce').value) / 100 || 0;
+        const hpHealAmount =
+          parseFloat(document.getElementById('hpHealAmount').value) || 0;
+        const mpHealAmount =
+          parseFloat(document.getElementById('mpHealAmount').value) || 0;
+        const mpExpectedUsage =
+          parseFloat(document.getElementById('mpExpectedUsage').value) || 0;
+
+        const mpRate = magicGuard ? (20 + magicGuardLevel * 3) / 100 : 0;
+        document.getElementById('mpReductionRate').value =
+          Math.round(mpRate * 100) + '%';
+
+        const finalHP = sacredFire ? maxHP * 1.6 : maxHP;
+        const finalMP = sacredFire ? maxMP * 1.6 : maxMP;
+        document.getElementById('finalHP').value = Math.round(finalHP);
+        document.getElementById('finalMP').value = Math.round(finalMP);
+
+        const finalMonsterDamage = Math.max(
+          0,
+          monsterDamage * (1 - magicResist) * (1 - forceReduce),
+        );
+        document.getElementById('finalMonsterDamage').value =
+          Math.round(finalMonsterDamage);
+
+        const hpDamage = finalMonsterDamage * (1 - mpRate);
+        document.getElementById('hpDamage').value = Math.round(hpDamage);
+
+        const mpDamage = finalMonsterDamage * mpRate;
+        document.getElementById('mpDamage').value = Math.round(mpDamage);
+
+        let actualMP = 0;
+        if (magicGuard) {
+          const mpRemain = mpHealAmount - mpExpectedUsage;
+          actualMP = mpRemain <= mpDamage ? mpRemain : mpDamage;
+          if (actualMP < 0) actualMP = 0;
+        }
+        document.getElementById('actualMPDamage').value = Math.round(actualMP);
+
+        const actualHP = finalMonsterDamage - actualMP;
+        document.getElementById('actualHPDamage').value = Math.round(actualHP);
+
+        let hpSuggestRatio = 0;
+        if (finalHP - hpHealAmount >= actualHP) {
+          hpSuggestRatio = (finalHP - hpHealAmount) / finalHP;
+        } else {
+          hpSuggestRatio = actualHP / finalHP;
+        }
+        const rawPercent = Math.round(hpSuggestRatio * 100);
+        document.getElementById('hpSuggest').value =
+          Math.min(100, rawPercent) + '%';
+      }
+
+      // 綁定輸入觸發
+      const inputs = document.querySelectorAll('input, select');
+      inputs.forEach((el) => el.addEventListener('input', updateAll));
+      inputs.forEach((el) => el.addEventListener('change', updateAll));
+      document.getElementById('sacredFire').addEventListener('change', updateAll);
+      document.getElementById('magicGuard').addEventListener('change', updateAll);
+
+      updateAll();
+
+      // 以下函式掛到 window 方便外部呼叫
+      window.simulate = function () {
+        if (window.chart && typeof window.chart.destroy === 'function') {
+          window.chart.destroy();
+          window.chart = null;
+        }
+        updateAll();
+
+        window.currentIndex = 0;
+        window.fullData = [];
+
+        const finalHP = +document.getElementById('finalHP').value || 1000;
+        const inputDamage = +document.getElementById('actualHPDamage').value;
+        const inputHeal = +document.getElementById('hpHealAmount').value;
+        const petHealPercent = +document.getElementById('hpPetSlider').value;
+        const yAxisMax = Math.ceil(finalHP / 1000) * 1000;
+        const yStep = 1000;
+
+        let hp = finalHP,
+          cd = 0,
+          time = 0.0,
+          nextAtk = 0.0;
+        const interval = 0.5,
+          totalTime = 30.0;
+        // === 模擬主程式（simulate 函式內部） ===
+        while (time <= totalTime) {
+          let take = 0,
+            give = 0;
+          // 受傷判定（在攻擊時間點）
+          if (Math.abs(time - nextAtk) < 0.001) {
+            take = inputDamage;
+            nextAtk += 2.0;
           }
-          const threshold = (maxHP - healAmount > monsterDamage) ? (maxHP - healAmount) : monsterDamage;
-          if (hp <= threshold && (t - lastHealTime >= healCD)) {
-            hp += healAmount;
-            if (hp > maxHP) hp = maxHP;
-            lastHealTime = t;
-            healTimes.add(t.toFixed(1));
-            logArea.innerHTML += `<span class="log-heal">[${t.toFixed(1)}s] 使用補品 +${healAmount}HP</span>\n`;
-          }
-          if (hp <= 0) {
-            hp = 0;
-            fullData.push(hp);
+
+          const tempHP = hp - take;
+          if (tempHP <= 0 && take > 0) {
+            console.log('死亡時間點', time);
+            window.fullData.push({
+              time,
+              hp: 0,
+              damage: take,
+              heal: 0,
+              cooldown: cd,
+            });
             break;
           }
-          fullData.push(hp);
-          t += interval;
+          const healThreshold = finalHP * (petHealPercent / 100);
+          const shouldHeal = tempHP < healThreshold && cd <= 0;
+
+          // 補血邏輯（只有非死亡才補）
+          if (shouldHeal || time === 0) {
+            give = inputHeal;
+            cd = 1.5;
+          }
+          // 扣完血再補血
+          hp = Math.min(finalHP, tempHP + give);
+          window.fullData.push({
+            time,
+            hp,
+            damage: take,
+            heal: give,
+            cooldown: cd
+          });
+
+          time += interval;
+          cd = Math.max(0, cd - interval);
         }
-        index = 0;
-        // 預設labels全出，資料先全null只顯示空軸
-        drawChart(fullLabels, new Array(fullLabels.length).fill(null));
-        updateBars(maxHP, 0);
-      }
 
-      function play() {
-        if (timer) return;
-        if (index >= fullData.length) index = 0;
-        isPaused = false;
-        pauseBtn.disabled = false;
-        playBtn.disabled = true;
-        cdLeft = 0;
+        const ctx = document.getElementById('chart').getContext('2d');
+        window.chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: [],  // 空陣列：播放動畫時才加
+            datasets: [
+              {
+                label: '當前血量',
+                data: [],  // 空陣列：播放動畫時才加
+                borderColor: 'red',
+                borderWidth: 2,
+                stepped: true,
+                fill: false,
+                tension: 0,
+                pointRadius: window.fullData.map((d, i) => i === 0 || d.hp !== window.fullData[i - 1].hp ? 6 : 0),
+                pointBackgroundColor: 'red',
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: {
+              mode: 'nearest',
+              intersect: false,
+            },
+            scales: {
+              x: {
+                title: { display: true, text: '時間 (秒)' },
+                type: 'linear',
+                min: 0,
+                max: window.fullData[window.fullData.length - 1].time,
+                ticks: {
+                  autoSkip: false,
+                  callback: (v) => parseFloat(v).toFixed(1),
+                  maxRotation: 0,
+                  minRotation: 0,
+                  stepSize: window.innerWidth < 800 ? 1 : 0.5,
+                },
+              },
+              y: {
+                title: { display: true, text: 'HP', rotation: 0 },
+                min: 0,
+                max: yAxisMax,
+                ticks: {
+                  stepSize: yStep,
+                  callback: (v) => v.toLocaleString(),
+                },
+              },
+            },
+            plugins: {
+              tooltip: {
+                displayColors: false,
+                titleFont: { size: 18 },
+                bodyFont: { size: 18 },
+                callbacks: {
+                  title: (ctx) =>
+                    '當前血量: ' + window.fullData[ctx[0].dataIndex].hp,
+                  label: (ctx) => {
+                    const d = window.fullData[ctx.dataIndex];
+                    let lines = [];
+                    if (d.damage) lines.push('🩸 -' + d.damage + ' HP');
+                    if (d.heal) lines.push('🧪 +' + d.heal + ' HP');
+                    return lines;
+                  },
+                },
+              },
+              datalabels: {
+                display: (ctx) => {
+                  const i = ctx.dataIndex;
+                  const d = window.fullData[i];
+                  return i === 0 || d.hp !== window.fullData[i - 1].hp;
+                },
+                align: 'top',
+                color: 'red',
+                font: { size: 16, weight: 'bold' },
+                formatter: (_, ctx) => window.fullData[ctx.dataIndex].hp,
+              },
+            },
+          },
+          plugins: [ChartDataLabels],
+        });
 
-        timer = setInterval(() => {
-          if (index >= fullData.length) {
-            clearInterval(timer);
-            timer = null;
-            showTombstone();
-            pauseBtn.disabled = true;
-            playBtn.disabled = false;
+        window.updateXAxisTicks();
+
+        document.getElementById('logArea').textContent = '';
+        document.getElementById('tombstone').style.display = 'none';
+        document.getElementById('tombstone').style.top = '0px';
+        currentIndex = 0;
+        window.updateStatus(0);
+      };
+
+      window.play = function () {
+        if (!window.fullData.length || window.animationTimer) return;
+
+        window.animationTimer = setInterval(() => {
+          if (window.currentIndex >= window.fullData.length) {
+            clearInterval(window.animationTimer);
+            window.animationTimer = null;
             return;
           }
-          if (isPaused) return;
 
-          const hpNow = fullData[index];
-          const tNow = parseFloat(fullLabels[index]);
+          window.chart.data.labels = window.fullData
+            .slice(0, window.currentIndex + 1)
+            .map((d) => d.time.toFixed(1));
+          window.chart.data.datasets[0].data = window.fullData
+            .slice(0, window.currentIndex + 1)
+            .map((d) => d.hp);
+          window.chart.update('none');
 
-          // 建立一份完整長度資料陣列，index以前的是真值，後面是null，維持完整時間軸
-          let displayData = new Array(fullLabels.length).fill(null);
-          for(let i=0; i<=index; i++) {
-            displayData[i] = fullData[i];
+          const d = window.fullData[window.currentIndex];
+          const log = document.getElementById('logArea');
+          if (d.damage)
+            log.innerHTML += `<div class="log-attack">🩸 [${d.time.toFixed(1)}s] 受到攻擊 -${d.damage} HP</div>`;
+          if (d.heal)
+            log.innerHTML += `<div class="log-heal">🧪 [${d.time.toFixed(1)}s] 使用補品 +${d.heal} HP</div>`;
+          if (d.hp === 0) {
+            log.innerHTML += `<div class="log-death">☠️ [${d.time.toFixed(1)}s] 角色死亡</div>`;
+            window.showTombstone();
+            clearInterval(window.animationTimer);
+            window.animationTimer = null;
           }
-          chart.data.datasets[0].data = displayData;
-          chart.update('none');
 
-          if (healTimes.has(tNow.toFixed(1))) {
-            cdLeft = 0;
-          } else {
-            cdLeft += interval;
-          }
-
-          updateBars(hpNow, cdLeft);
-
-          index++;
+          window.updateStatus(window.currentIndex);
+          window.currentIndex++;
         }, 500);
-      }
+      };
 
-      function pause() {
-        if (!timer) return;
-        isPaused = true;
-        pauseBtn.disabled = true;
-        playBtn.disabled = false;
-      }
+      window.updateStatus = function (i) {
+        const d = window.fullData[i];
+        const finalHP = +document.getElementById('finalHP').value;
+        document.getElementById('hpStatus').textContent = `當前HP：${d.hp}`;
+        document.getElementById('cooldownStatus').textContent =
+          `補品冷卻：${d.cooldown?.toFixed(1) ?? 0}s`;
+        document.getElementById('hpFill').style.width =
+          (d.hp / finalHP) * 100 + '%';
+        document.getElementById('cooldownFill').style.width =
+          ((d.cooldown ?? 0) / 1.5) * 100 + '%';
+      };
 
-      function reset() {
-        clearInterval(timer);
-        timer = null;
-        isPaused = false;
-        pauseBtn.disabled = true;
-        playBtn.disabled = false;
-        tombstone.classList.remove("fall");
-        simulate();
-      }
+      window.pause = function () {
+        if (window.animationTimer) {
+          clearInterval(window.animationTimer);
+          window.animationTimer = null;
+        }
+      };
 
-      function showTombstone() {
-        tombstone.classList.add("fall");
-      }
+      window.reset = function () {
+        if (window.animationTimer) {
+          clearInterval(window.animationTimer);
+          window.animationTimer = null;
+        }
+        window.currentIndex = 0;
+        if (window.chart) {
+          window.chart.destroy();
+          window.chart = null;
+        }
+        document.getElementById('logArea').textContent = '';
+        document.getElementById('tombstone').style.display = 'none';
+        document.getElementById('tombstone').style.top = '0px';
+        document.getElementById('hpFill').style.width = '0%';
+        document.getElementById('cooldownFill').style.width = '0%';
+        document.getElementById('hpStatus').textContent = '';
+        document.getElementById('cooldownStatus').textContent = '';
+      };
 
-      function toggleMode() {
-        document.body.classList.toggle("dark-mode");
-      }
+      window.showTombstone = function () {
+        const t = document.getElementById('tombstone');
+        t.style.display = 'block';
+        setTimeout(() => {
+          t.style.top = '900px';
+        }, 100);
+      };
 
-      // 綁定按鈕事件
-      simulateBtn.onclick = simulate;
-      playBtn.onclick = play;
-      pauseBtn.onclick = pause;
-      resetBtn.onclick = reset;
-      toggleModeBtn.onclick = toggleMode;
+      window.updateXAxisTicks = function () {
+        if (!window.chart) return;
+        const step = window.innerWidth < 800 ? 1 : 0.5;
+        window.chart.options.scales.x.ticks.stepSize = step;
+        window.chart.update('none');
+      };
 
-      // 預設先做一次模擬，畫出空軸
-      simulate();
+      window.addEventListener('resize', window.updateXAxisTicks);
     };
   </script>
 </body>
