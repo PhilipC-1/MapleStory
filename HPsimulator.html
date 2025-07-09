@@ -484,16 +484,21 @@
     <button onclick="play()">播放動畫</button>
     <button id="pauseBtn" onclick="pause()">暫停</button>
     <button id="resetBtn" onclick="reset()">重置</button>
-    <!-- 最後加入的hpStatus和cooldownStatus -->
-    <div style="margin-top: 10px;">
-      <span id="hpStatus"></span><br />
-      <span id="cooldownStatus"></span>
-    </div>
-    <!-- 補品血條 -->
-    <div id="hpBar"><div id="hpFill"></div></div>
-    <div id="cooldownBar"><div id="cooldownFill"></div></div>
+  </div>
+<!-- 狀態顯示（數字 + 讀條） -->
+<div style="margin-top: 10px;">
+  <div id="statusContainer" style="display: flex; justify-content: center; gap: 40px; font-weight: bold; font-size: 18px;">
+    <div>當前HP：<span id="hpValue" style="color:red; min-width: 60px; display:inline-block; text-align: center;">--</span></div>
+    <div>補品CD：<span id="cdValue" style="color:green; min-width: 60px; display:inline-block; text-align: center;">--</span></div>
   </div>
 
+  <!-- HP 進度條 -->
+  <div id="hpBar" style="margin-top: 5px;"><div id="hpFill"></div></div>
+
+  <!-- CD 進度條 -->
+  <div id="cooldownBar"><div id="cooldownFill"></div></div>
+</div>
+  
   <div id="chartContainer" class="section">
     <canvas id="chart"></canvas>
   </div>
@@ -860,9 +865,8 @@
       window.updateStatus = function (i) {
         const d = window.fullData[i];
         const finalHP = +document.getElementById('finalHP').value;
-        document.getElementById('hpStatus').textContent = `當前HP：${d.hp}`;
-        document.getElementById('cooldownStatus').textContent =
-          `補品冷卻：${d.cooldown?.toFixed(1) ?? 0}s`;
+        document.getElementById('hpValue').textContent = d.hp;
+        document.getElementById('cdValue').textContent = (d.cooldown ?? 0).toFixed(1) + 's';
         document.getElementById('hpFill').style.width =
           (d.hp / finalHP) * 100 + '%';
         document.getElementById('cooldownFill').style.width =
