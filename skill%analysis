@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>技能倍率分析工具</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 22px;
+      padding: 20px;
+      background-color: #f7f7f7;
+      line-height: 1.4;
+    }
+    input, textarea {
+      font-size: 22px;
+      padding: 6px;
+      margin: 6px 0;
+      width: 140px;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    textarea {
+      width: 100%;
+      height: 140px;
+      resize: vertical;
+      font-family: Arial, monospace;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 960px;
+      font-family: Arial, sans-serif;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      text-align: center;
+      padding: 8px;
+    }
+    th {
+      background-color: #ddd;
+    }
+    .atk-inputs {
+      margin-bottom: 14px;
+    }
+    button {
+      font-size: 22px;
+      padding: 8px 16px;
+      margin: 12px 8px 24px 8px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      font-family: Arial, sans-serif;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 20px;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>技能倍率分析工具</h2>
+    <p style="font-size:18px;font-weight: bold; color:#555; margin-top:4px;">
+  請先按 [產生傷害輸入表] ，並在快速貼上傷害數據區輸入完後按 [貼上填入所有輸入框] ，最後再按 [分析技能倍率] 即可。
+</p>
+
+    <div class="atk-inputs">
+      <label>表攻 1：
+        <input type="number" id="atk1" value="108" min="1" />
+      </label>
+      <label>表攻 2：
+        <input type="number" id="atk2" value="109" min="1" />
+      </label>
+      <label>表攻 3：
+        <input type="number" id="atk3" value="110" min="1" />
+      </label>
+      <label>怪物防禦力：
+        <input type="number" id="defense" value="0" min="0" />
+      </label>
+
+      <button onclick="generateTables()">產生傷害輸入表</button>
+    </div>
+
+    <div id="inputTablesContainer"></div>
+
+    <div>
+      <h3>快速貼上傷害數據（每行一個傷害值，系統會依序填入 LV1~LV30）</h3>
+      <label>表攻 1 傷害快速貼上：</label>
+      <textarea id="pasteAtk1" placeholder="請貼上30筆傷害，換行分隔"></textarea>
+
+      <label>表攻 2 傷害快速貼上：</label>
+      <textarea id="pasteAtk2" placeholder="請貼上30筆傷害，換行分隔"></textarea>
+
+      <label>表攻 3 傷害快速貼上：</label>
+      <textarea id="pasteAtk3" placeholder="請貼上30筆傷害，換行分隔"></textarea>
+
+      <button onclick="pasteToInputs()">貼上填入所有輸入框</button>
+    </div>
+
+    <button onclick="analyze()">分析技能倍率</button>
+
+    <div id="analysisResult"></div>
+
+    <div id="approxTable"></div>
+  </div>
+
+<script>
+  function generateTables() {
+    const atk1 = parseInt(document.getElementById("atk1").value);
+    const atk2 = parseInt(document.getElementById("atk2").value);
+    const atk3 = parseInt(document.getElementById("atk3").value);
+
+    const container = document.getElementById("inputTablesContainer");
+    container.innerHTML = "";
+
+    function createTable(atk, atkId) {
+      const table = document.createElement("table");
+      let html = `<tr><th>LV</th><th>表攻 ${atk}</th></tr>`;
+      for (let i = 1; i <= 30; i++) {
+        html += `<tr>
+          <td>LV${i}</td>
+          <td><input type="number" min="0" id="${atkId}_lv${i}" style="width:90px"></td>
+        </tr>`;
+      }
+      table.innerHTML = html;
+      return table;
+    }
+
+    container.appendChild(createTable(atk1, "atk1"));
+    container.appendChild(createTable(atk2, "atk2"));
+    container.appendChild(createTable(atk3, "atk3"));
+
+    // 清空分析與近似表
+    document.getElementById("analysisResult").innerHTML = "";
+    document.getElementById("approxTable").innerHTML = "";
+  }
+
+  function pasteToInputs() {
+    const pasteAtk1 = document.getElementById("pasteAtk1").value.trim().split(/\r?\n/);
+    const pasteAtk2 = document.getElementById("pasteAtk2").value.trim().split(/\r?\n/);
+    const pasteAtk3 = document.getElementById("pasteAtk3").value.trim().split(/\r?\n/);
+
+    function fillInputs(arr, atkId) {
+      for(let i=0; i<30; i++){
+        const val = arr[i] ? parseInt(arr[i]) : "";
+        const input = document.getElementById(`${atkId}_lv${i+1}`);
+        if(input){
+          input.value = isNaN(val) ? "" : val;
+        }
+      }
+    }
+    fillInputs(pasteAtk1, "atk1");
+    fillInputs(pasteAtk2, "atk2");
+    fillInputs(pasteAtk3, "atk3");
+  }
+
+  // 傷害區間計算，物理防禦納入計算：傳回[(dmg-1)/(atk - defense*0.55), dmg/(atk - defense*0.55)]
+  function getRange(atk, dmg, defense) {
+    if (isNaN(dmg) || dmg <= 0) return null;
+    const effectiveAtk = atk - defense * 0.55;
+    if(effectiveAtk <= 0) return null; // 避免負值或0除錯
+    return [(dmg - 1) / effectiveAtk, dmg / effectiveAtk];
+  }
+
+  function intersectRanges(r1, r2, r3) {
+    if (!r1 || !r2 || !r3) return null;
+    const low = Math.max(r1[0], r2[0], r3[0]);
+    const high = Math.min(r1[1], r2[1], r3[1]);
+    return low < high ? [low, high] : null;
+  }
+
+  function chooseApproxValue(low, high) {
+    const lowP = Math.ceil(low * 100);
+    const highP = Math.floor(high * 100);
+    for(let p = lowP; p <= highP; p++){
+      if(p % 1 === 0) return p / 100;
+    }
+    for(let p = lowP; p <= highP; p++){
+      if(p * 10 % 5 === 0) return p / 100;
+    }
+    return (low + high) / 2;
+  }
+
+  function analyze() {
+    const atk1 = parseFloat(document.getElementById("atk1").value);
+    const atk2 = parseFloat(document.getElementById("atk2").value);
+    const atk3 = parseFloat(document.getElementById("atk3").value);
+    const defense = parseFloat(document.getElementById("defense").value);
+
+    let analysisHtml = `
+      <h3>技能倍率交集區間分析（含物理防禦，下開上閉）</h3>
+      <table>
+        <tr>
+          <th>LV</th>
+          <th>${atk1} 區間</th>
+          <th>${atk2} 區間</th>
+          <th>${atk3} 區間</th>
+          <th>三者交集</th>
+        </tr>
+    `;
+
+    const intersectRangesArr = [];
+
+    for(let i=1; i<=30; i++){
+      const dmg1 = parseFloat(document.getElementById(`atk1_lv${i}`)?.value);
+      const dmg2 = parseFloat(document.getElementById(`atk2_lv${i}`)?.value);
+      const dmg3 = parseFloat(document.getElementById(`atk3_lv${i}`)?.value);
+
+      const r1 = getRange(atk1, dmg1, defense);
+      const r2 = getRange(atk2, dmg2, defense);
+      const r3 = getRange(atk3, dmg3, defense);
+      const rI = intersectRanges(r1, r2, r3);
+      intersectRangesArr.push(rI);
+
+      analysisHtml += `<tr>
+        <td>LV${i}</td>
+        <td>${r1 ? r1[0].toFixed(5) + " ~ " + r1[1].toFixed(5) : "-"}</td>
+        <td>${r2 ? r2[0].toFixed(5) + " ~ " + r2[1].toFixed(5) : "-"}</td>
+        <td>${r3 ? r3[0].toFixed(5) + " ~ " + r3[1].toFixed(5) : "-"}</td>
+        <td style="color:${rI ? 'green' : 'red'}">${rI ? rI[0].toFixed(5) + " ~ " + rI[1].toFixed(5) : "❌ 無交集"}</td>
+      </tr>`;
+    }
+    analysisHtml += "</table>";
+
+    let approxHtml = `<h3>近似技能倍率表（依規則選值，連續且合法）</h3><table><tr><th>LV</th><th>近似倍率(%)</th></tr>`;
+
+    let prevVal = null;
+    for(let i=0; i<30; i++){
+      const r = intersectRangesArr[i];
+      if(!r){
+        approxHtml += `<tr><td>LV${i+1}</td><td style="color:red">無交集</td></tr>`;
+        prevVal = null;
+        continue;
+      }
+      let chosen;
+      if(prevVal === null){
+        chosen = chooseApproxValue(r[0], r[1]);
+      } else {
+        const lowBound = Math.max(r[0], prevVal);
+        let candidate = null;
+
+        for(let p = Math.ceil(lowBound*100); p <= Math.floor(r[1]*100); p++){
+          if(p % 1 === 0){
+            candidate = p / 100;
+            break;
+          }
+        }
+        if(candidate === null){
+          for(let p = Math.ceil(lowBound*100); p <= Math.floor(r[1]*100); p++){
+            if(p*10 % 5 === 0){
+              candidate = p / 100;
+              break;
+            }
+          }
+        }
+        if(candidate === null){
+          let mid = (r[0] + r[1]) / 2;
+          candidate = mid < prevVal ? prevVal : mid;
+          if(candidate > r[1]) candidate = r[1];
+        }
+        chosen = candidate;
+      }
+      approxHtml += `<tr><td>LV${i+1}</td><td>${(chosen*100).toFixed(2)}%</td></tr>`;
+      prevVal = chosen;
+    }
+    approxHtml += "</table>";
+
+    document.getElementById("analysisResult").innerHTML = analysisHtml;
+    document.getElementById("approxTable").innerHTML = approxHtml;
+  }
+</script>
+</body>
+</html>
