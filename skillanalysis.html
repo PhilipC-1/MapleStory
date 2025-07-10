@@ -3,102 +3,105 @@
 <head>
   <meta charset="UTF-8" />
   <title>技能倍率分析工具</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      font-size: 22px;
-      padding: 20px;
-      background-color: #f7f7f7;
-      line-height: 1.4;
-    }
-    input, textarea {
-      font-size: 22px;
-      padding: 6px;
-      margin: 6px 0;
-      width: 140px;
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
-.small-table {
-  font-size: 14px;     /* 字體縮小 */
-  max-width: 600px;    /* 表格寬度限制 */
-  margin: 12px auto;   /* 置中並稍微間距 */
-}
-.small-table th, .small-table td {
-  padding: 4px 6px;    /* 縮小單元格內邊距 */
-}
-    
-    textarea {
-      width: 100%;
-      height: 140px;
-      resize: vertical;
-      font-family: Arial, monospace;
-    }
-    table {
-      border-collapse: collapse;
-      margin-top: 20px;
-      width: 100%;
-      max-width: 960px;
-      font-family: Arial, sans-serif;
-    }
-    th, td {
-      border: 1px solid #aaa;
-      text-align: center;
-      padding: 8px;
-    }
-    th {
-      background-color: #ddd;
-    }
-    .atk-inputs {
-      margin-bottom: 14px;
-    }
-    button {
-      font-size: 22px;
-      padding: 8px 16px;
-      margin: 12px 8px 24px 8px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-      font-family: Arial, sans-serif;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    .container {
-      max-width: 1000px;
-      margin: auto;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 20px;
-      margin-bottom: 6px;
-    }
-  </style>
+ <style>
+  /* 其餘不動，這段替換原本CSS */
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    padding: 20px;
+    background-color: #f7f7f7;
+    line-height: 1.4;
+    text-align: center;
+  }
+  input, textarea, button {
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+  }
+  input[type="number"] {
+    width: 90px;
+    padding: 4px;
+    text-align: center;
+    margin: 4px 0;
+  }
+  textarea {
+    width: 300px; /* 寬度改300 */
+    height: 140px;
+    resize: vertical;
+    padding: 6px;
+    margin: 6px 0 16px 0;
+    font-family: monospace, Arial, sans-serif;
+    font-size: 16px;
+  }
+  button {
+    font-size: 18px;
+    padding: 8px 20px;
+    margin: 12px 10px 20px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    display: inline-block;
+  }
+  button:hover {
+    background-color: #45a049;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  label {
+    font-weight: bold;
+    display: inline-block;
+    margin: 12px 16px 8px 0;
+    min-width: 140px;
+    text-align: right;
+  }
+  .atk-inputs {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* 新增這段，讓三個表格並排 */
+  #inputTablesContainer {
+    display: flex;
+    justify-content: center;
+    gap: 20px;  /* 三表格間距 */
+    margin-bottom: 30px;
+  }
+  #inputTablesContainer table {
+    border-collapse: collapse;
+    width: 140px; /* 縮小表格寬度，三個並排 */
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+  }
+  #inputTablesContainer th, #inputTablesContainer td {
+    border: 1px solid #aaa;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  #inputTablesContainer th {
+    background-color: #ddd;
+  }
+</style>
 </head>
 <body>
   <div class="container">
     <h2>技能倍率分析工具</h2>
-    <p style="font-size:18px;font-weight: bold; color:#3489eb; margin-top:4px;">
-  請先按 [產生傷害輸入表] ，並在快速貼上傷害數據區輸入完後按 [貼上填入所有輸入框] ，最後再按 [分析技能倍率] 即可。
-</p>
+    <p style="font-size:16px; font-weight: bold; color:#3489eb; margin-top:4px; margin-bottom: 24px;">
+      請先按 [產生傷害輸入表] ，並在快速貼上傷害數據區輸入完後按 [貼上填入所有輸入框] ，最後再按 [分析技能倍率] 即可。
+    </p>
 
     <div class="atk-inputs">
-      <label>表攻 1：
-        <input type="number" id="atk1" value="108" min="1" />
-      </label>
-      <label>表攻 2：
-        <input type="number" id="atk2" value="109" min="1" />
-      </label>
-      <label>表攻 3：
-        <input type="number" id="atk3" value="110" min="1" />
-      </label>
-      <label>怪物防禦力：
-        <input type="number" id="defense" value="0" min="0" />
-      </label>
-
+      <label for="atk1">表攻 1：</label>
+      <input type="number" id="atk1" value="108" min="1" />
+      <label for="atk2">表攻 2：</label>
+      <input type="number" id="atk2" value="109" min="1" />
+      <label for="atk3">表攻 3：</label>
+      <input type="number" id="atk3" value="110" min="1" />
+      </div><label for="defense">怪物防禦力：</label>
+      <input type="number" id="defense" value="0" min="0" />
+      <br/>
       <button onclick="generateTables()">產生傷害輸入表</button>
     </div>
 
@@ -106,26 +109,28 @@
 
     <div>
       <h3>快速貼上傷害數據（每行一個傷害值，系統會依序填入 LV1~LV30）</h3>
-      <label>表攻 1 傷害快速貼上：</label>
+      <label for="pasteAtk1" style="text-align:left; display:block; max-width: 350px; margin: auto;">表攻 1 傷害快速貼上：</label>
       <textarea id="pasteAtk1" placeholder="請貼上30筆傷害，換行分隔"></textarea>
 
-      <label>表攻 2 傷害快速貼上：</label>
+      <label for="pasteAtk2" style="text-align:left; display:block; max-width: 350px; margin: auto;">表攻 2 傷害快速貼上：</label>
       <textarea id="pasteAtk2" placeholder="請貼上30筆傷害，換行分隔"></textarea>
 
-      <label>表攻 3 傷害快速貼上：</label>
+      <label for="pasteAtk3" style="text-align:left; display:block; max-width: 350px; margin: auto;">表攻 3 傷害快速貼上：</label>
       <textarea id="pasteAtk3" placeholder="請貼上30筆傷害，換行分隔"></textarea>
-
+     </div>
       <button onclick="pasteToInputs()">貼上填入所有輸入框</button>
     </div>
 
     <button onclick="analyze()">分析技能倍率</button>
 
     <div id="analysisResult"></div>
-
     <div id="approxTable"></div>
   </div>
 
 <script>
+  // 一開始自動生成表格
+  window.onload = generateTables;
+
   function generateTables() {
     const atk1 = parseInt(document.getElementById("atk1").value);
     const atk2 = parseInt(document.getElementById("atk2").value);
@@ -136,11 +141,12 @@
 
     function createTable(atk, atkId) {
       const table = document.createElement("table");
+      table.className = "small-table";
       let html = `<tr><th>LV</th><th>表攻 ${atk}</th></tr>`;
       for (let i = 1; i <= 30; i++) {
         html += `<tr>
           <td>LV${i}</td>
-          <td><input type="number" min="0" id="${atkId}_lv${i}" style="width:90px"></td>
+          <td><input type="number" min="0" id="${atkId}_lv${i}" style="width:70px"></td>
         </tr>`;
       }
       table.innerHTML = html;
@@ -151,7 +157,6 @@
     container.appendChild(createTable(atk2, "atk2"));
     container.appendChild(createTable(atk3, "atk3"));
 
-    // 清空分析與近似表
     document.getElementById("analysisResult").innerHTML = "";
     document.getElementById("approxTable").innerHTML = "";
   }
@@ -179,7 +184,7 @@
   function getRange(atk, dmg, defense) {
     if (isNaN(dmg) || dmg <= 0) return null;
     const effectiveAtk = atk - defense * 0.55;
-    if(effectiveAtk <= 0) return null; // 避免負值或0除錯
+    if(effectiveAtk <= 0) return null; 
     return [(dmg - 1) / effectiveAtk, dmg / effectiveAtk];
   }
 
@@ -193,12 +198,15 @@
   function chooseApproxValue(low, high) {
     const lowP = Math.ceil(low * 100);
     const highP = Math.floor(high * 100);
+    // 第一順位：整數倍率（倍率*100尾數為0）
     for(let p = lowP; p <= highP; p++){
-      if(p % 1 === 0) return p / 100;
+      if(p % 10 === 0) return p / 100;
     }
+    // 第二順位：倍率小數第一位是5（尾數是5）
     for(let p = lowP; p <= highP; p++){
-      if(p * 10 % 5 === 0) return p / 100;
+      if(p % 10 === 5) return p / 100;
     }
+    // 第三順位：區間中點
     return (low + high) / 2;
   }
 
@@ -260,20 +268,23 @@
         const lowBound = Math.max(r[0], prevVal);
         let candidate = null;
 
+        // 第一順位整數倍率
         for(let p = Math.ceil(lowBound*100); p <= Math.floor(r[1]*100); p++){
-          if(p % 1 === 0){
+          if(p % 10 === 0){
             candidate = p / 100;
             break;
           }
         }
+        // 第二順位小數點第一位是5
         if(candidate === null){
           for(let p = Math.ceil(lowBound*100); p <= Math.floor(r[1]*100); p++){
-            if(p*10 % 5 === 0){
+            if(p % 10 === 5){
               candidate = p / 100;
               break;
             }
           }
         }
+        // 第三順位區間中點
         if(candidate === null){
           let mid = (r[0] + r[1]) / 2;
           candidate = mid < prevVal ? prevVal : mid;
