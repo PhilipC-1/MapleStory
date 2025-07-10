@@ -19,6 +19,15 @@
       box-sizing: border-box;
       font-family: Arial, sans-serif;
     }
+.small-table {
+  font-size: 14px;     /* 字體縮小 */
+  max-width: 600px;    /* 表格寬度限制 */
+  margin: 12px auto;   /* 置中並稍微間距 */
+}
+.small-table th, .small-table td {
+  padding: 4px 6px;    /* 縮小單元格內邊距 */
+}
+    
     textarea {
       width: 100%;
       height: 140px;
@@ -201,7 +210,7 @@
 
     let analysisHtml = `
       <h3>技能倍率交集區間分析（含物理防禦，下開上閉）</h3>
-      <table>
+      <table class="small-table">
         <tr>
           <th>LV</th>
           <th>${atk1} 區間</th>
@@ -234,8 +243,8 @@
     }
     analysisHtml += "</table>";
 
-    let approxHtml = `<h3>近似技能倍率表（依規則選值，連續且合法）</h3><table><tr><th>LV</th><th>近似倍率(%)</th></tr>`;
-
+    let approxHtml = `<h3>近似技能倍率表（依規則選值，連續且合法）</h3>
+    <table class="small-table"><tr><th>LV</th><th>近似倍率(%)</th></tr>`;
     let prevVal = null;
     for(let i=0; i<30; i++){
       const r = intersectRangesArr[i];
