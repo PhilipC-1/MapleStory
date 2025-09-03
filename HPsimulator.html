@@ -652,7 +652,7 @@
         } else {
           hpSuggestRatio = actualHP / finalHP;
         }
-        const rawPercent = Math.round(hpSuggestRatio * 100);
+        const rawPercent = Math.ceil(hpSuggestRatio * 100); // 無條件進位
         document.getElementById('hpSuggest').value =
           Math.min(100, rawPercent) + '%';
       }
